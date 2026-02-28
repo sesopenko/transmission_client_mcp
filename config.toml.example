@@ -1,0 +1,12 @@
+[transmission]
+host = "localhost"
+port = 9091
+username = "transmission"
+password = "password"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[logging]
+level = "info"

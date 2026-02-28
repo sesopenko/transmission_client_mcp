@@ -1,0 +1,128 @@
+# Transmission Client MCP
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE.txt)
+[![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/downloads/)
+
+An MCP server that exposes [Transmission](https://transmissionbt.com/) BitTorrent client controls as tools, allowing AI assistants to manage torrents on your behalf.
+
+[MCP (Model Context Protocol)](https://modelcontextprotocol.io/) is an open standard that lets AI assistants call external tools and services. This server implements MCP over HTTP/SSE so any MCP-compatible AI application can control your Transmission instance.
+
+---
+
+## Prerequisites
+
+- **Transmission** — running and accessible on your network
+- **Docker** — for the Docker Compose deployment path
+- **uv** — for the source deployment path (see [Installing uv](https://docs.astral.sh/uv/getting-started/installation/))
+
+---
+
+## Quick Start
+
+### Option A — Docker Compose
+
+1. Copy the example config and edit it:
+
+   ```bash
+   cp config.toml.example config.toml
+   ```
+
+2. Start the server:
+
+   ```bash
+   docker compose up -d
+   ```
+
+### Option B — Run from Source
+
+1. Install [uv](https://docs.astral.sh/uv/getting-started/installation/) if you haven't already.
+
+2. Install dependencies:
+
+   ```bash
+   uv sync
+   ```
+
+3. Copy the example config and edit it:
+
+   ```bash
+   cp config.toml.example config.toml
+   ```
+
+4. Start the server:
+
+   ```bash
+   uv run python -m transmission_mcp
+   ```
+
+---
+
+## Configuration
+
+Create a `config.toml` in the working directory (or pass `--config <path>`):
+
+```toml
+[transmission]
+host = "localhost"
+port = 9091
+username = "transmission"
+password = "password"
+
+[server]
+host = "0.0.0.0"
+port = 8080
+
+[logging]
+level = "info"
+```
+
+---
+
+## Connecting an AI Application
+
+Point your MCP-compatible AI application at the server's SSE endpoint:
+
+```
+http://<host>:<port>/sse
+```
+
+For example, if the server is running on `192.168.1.10` with the default port:
+
+```
+http://192.168.1.10:8080/sse
+```
+
+Consult your AI application's documentation for how to register an MCP server.
+
+---
+
+## Available Tools
+
+| Tool | Description |
+|---|---|
+
+> Tools are documented here as they are implemented.
+
+---
+
+## Security
+
+This server has **no authentication** on its MCP endpoint. It is designed for LAN use only.
+
+**Do not expose this server directly to the internet.**
+
+If you need to access it remotely, place it behind a reverse proxy that handles TLS termination and access control. Configuring a reverse proxy is outside the scope of this project.
+
+---
+
+## Contributing / Maintaining
+
+See [MAINTAINERS.md](MAINTAINERS.md) for setup, development commands, and how to run tests.
+
+---
+
+## License
+
+Copyright (c) Sean Esopenko 2026
+
+This project is licensed under the [GNU General Public License v3.0](LICENSE.txt).
