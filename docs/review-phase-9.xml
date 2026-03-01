@@ -1,0 +1,95 @@
+<review phase="10" subject="GitHub Actions CI/CD Pipeline">
+  <summary>
+    <status>pass_with_notes</status>
+    <scope>
+      <file>.github/workflows/ci.yml</file>
+      <file>.github/workflows/publish.yml</file>
+    </scope>
+  </summary>
+
+  <findings>
+    <finding id="ci-001" severity="info">
+      <title>CI workflow matches required triggers and quality gates</title>
+      <details>
+        <point>Triggers on push to main, push of v* tags, and PRs targeting main.</point>
+        <point>Runs formatting check (ruff format --check), lint (ruff check), and typing (mypy src/) before tests.</point>
+        <point>Uses astral-sh/setup-uv with Python 3.13 and dependency caching, then uv sync --frozen.</point>
+      </details>
+    </finding>
+
+    <finding id="ci-002" severity="note">
+      <title>Integration tests will run in CI and may be flaky due to Docker dependency</title>
+      <details>
+        <point>The test job runs uv run pytest (full suite). If integration tests spin up Docker containers, GitHub-hosted runners usually support Docker, but failures can occur due to network, image pull limits, or tracker connectivity.</point>
+        <point>This is aligned with the stated requirement to run the full suite, but expect occasional external flakiness unrelated to code.</point>
+      </details>
+      <recommendation>
+        <point>If flakiness becomes an issue, consider marking network-dependent tests with a separate marker and running them in a dedicated job with retries or increased timeouts, while still keeping them required for merge/release.</point>
+      </recommendation>
+    </finding>
+
+    <finding id="pub-001" severity="info">
+      <title>Publish workflow correctly gates on CI success via workflow_run</title>
+      <details>
+        <point>Workflow triggers only after CI completes; each publish job checks conclusion == success.</point>
+        <point>Both jobs check out the exact triggering commit using head_sha, preventing publishing a different revision than was tested.</point>
+      </details>
+    </finding>
+
+    <finding id="pub-002" severity="warning">
+      <title>Release publishing condition likely will not work for tag pushes</title>
+      <details>
+        <point>The release job uses: startsWith(github.event.workflow_run.head_branch, 'v').</point>
+        <point>On workflow_run events triggered by tag pushes, head_branch is typically the source branch (e.g., main) or can be empty/null; the tag name is not reliably available as head_branch.</point>
+        <point>As a result, tagged releases may never publish semver tags, even though CI ran on tag push.</point>
+      </details>
+      <recommendation>
+        <point>Derive release intent and version from the tag ref instead of head_branch. Common patterns:
+          1) Trigger publish directly on push tags (v*) and gate on CI via required status checks (branch protection), or
+          2) Keep workflow_run but query the Git ref associated with head_sha (GitHub API) to find tags pointing to that commit, or
+          3) Use github.event.workflow_run.head_repository + head_sha and a git fetch --tags to detect tags containing HEAD, then compute version tags.
+        </point>
+        <point>If staying with workflow_run, update the condition to detect a tag context and compute VERSION accordingly (not from head_branch).</point>
+      </recommendation>
+    </finding>
+
+    <finding id="pub-003" severity="note">
+      <title>Docker image tagging logic is correct assuming version is derived correctly</title>
+      <details>
+        <point>The shell logic computes VERSION, MAJOR, and MINOR and pushes :x.y.z, :x.y, :x.</point>
+        <point>Build uses buildx, linux/amd64 only, and GHA cache for layers; aligns with requirements.</point>
+      </details>
+    </finding>
+
+    <finding id="pub-004" severity="info">
+      <title>Credentials handling aligns with requirements</title>
+      <details>
+        <point>Uses docker/login-action with DOCKERHUB_USERNAME and DOCKERHUB_ACCESS_TOKEN secrets.</point>
+        <point>Publishes to sesopenko/transmission_client_mcp as required.</point>
+      </details>
+    </finding>
+  </findings>
+
+  <action_items>
+    <action id="a-001" priority="high" maps_to="pub-002">
+      <title>Fix release publish detection for v* tags</title>
+      <steps>
+        <step>Adjust publish-release job condition and version derivation so it reliably triggers on tag pushes.</step>
+        <step>Ensure VERSION is taken from the tag (e.g., v1.2.3), not from head_branch.</step>
+        <step>Add a quick validation note in the workflow (or a minimal test run) to confirm tags publish as expected.</step>
+      </steps>
+    </action>
+
+    <action id="a-002" priority="medium" maps_to="ci-002">
+      <title>Consider resilience for Docker/network-dependent integration tests</title>
+      <steps>
+        <step>Optionally split unit vs integration tests into separate jobs and apply retries/timeouts to integration job if needed.</step>
+      </steps>
+    </action>
+  </action_items>
+
+  <files_reviewed>
+    <file path=".github/workflows/ci.yml" />
+    <file path=".github/workflows/publish.yml" />
+  </files_reviewed>
+</review>

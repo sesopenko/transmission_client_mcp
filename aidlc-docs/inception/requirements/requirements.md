@@ -212,6 +212,30 @@ Each entry returned by `list_torrents` SHALL include the following fields:
   level = "info"
   ```
 
+### NFR-08: CI/CD Pipeline
+
+- A GitHub Actions **CI workflow** (`ci.yml`) SHALL run on:
+  - Push to `main`
+  - Push of `v*` tags (so the publish workflow has a CI run to gate on for release tags)
+  - Pull requests targeting `main`
+- The CI workflow SHALL enforce the following quality gates before running tests:
+  - `ruff format --check .` — formatting
+  - `ruff check .` — linting
+  - `mypy src/` — type checking
+- The CI workflow SHALL run unit tests (`uv run pytest tests/unit/`) and integration tests (`uv run pytest tests/integration/`) as separate jobs after quality gates pass
+- The integration test job SHALL have a 15-minute timeout to guard against Docker container or network hangs
+- A GitHub Actions **Publish workflow** (`publish.yml`) SHALL trigger automatically via `workflow_run` after CI completes
+- The Publish workflow SHALL only execute when CI concluded with `success` — a failed CI run SHALL never result in a published image
+- On every successful push to `main`, the Publish workflow SHALL push a Docker image tagged `:latest` to DockerHub
+- On push of a `v*` git tag, the Publish workflow SHALL push semver tags derived from the tag name: `:x.y.z`, `:x.y`, and `:x`; the tag SHALL be detected via `git tag --points-at <head_sha>` rather than `head_branch`, which is unreliable for tag-triggered `workflow_run` events
+- DockerHub credentials SHALL be stored as GitHub Actions secrets:
+  - `DOCKERHUB_USERNAME` — DockerHub account username
+  - `DOCKERHUB_ACCESS_TOKEN` — DockerHub personal access token
+- The DockerHub image name SHALL be `sesopenko/transmission_client_mcp`
+- The image SHALL be built for `linux/amd64` only
+- Both workflows SHALL use `ubuntu-latest` GitHub-hosted runners
+- CI SHALL use `astral-sh/setup-uv` with Python `3.13` (latest patch) and uv dependency caching
+
 ### NFR-09: Security Extension
 - **Disabled** — this is a personal LAN tool; security rules are not enforced as blocking constraints
 

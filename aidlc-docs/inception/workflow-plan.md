@@ -215,6 +215,28 @@ Approved requirements: `aidlc-docs/inception/requirements/requirements.md`
 
 ---
 
+### Phase 10 — GitHub Actions CI/CD Pipeline
+
+**Goal**: Automate quality gates, test execution, and Docker image publication via GitHub Actions so every push to `main` is validated and the image delivered to DockerHub without manual intervention.
+
+**Deliverables**:
+- `.github/workflows/ci.yml`:
+  - Triggers: push to `main`, push of `v*` tags, pull requests targeting `main`
+  - `quality` job: runs `ruff format --check .`, `ruff check .`, `mypy src/`
+  - `test-unit` job (requires `quality`): runs `uv run pytest tests/unit/`
+  - `test-integration` job (requires `quality`, `timeout-minutes: 15`): runs `uv run pytest tests/integration/` — Docker-dependent; timeout guards against container or network hangs
+  - Uses `astral-sh/setup-uv` with Python `3.13` and uv dependency caching
+- `.github/workflows/publish.yml`:
+  - Trigger: `workflow_run` (CI workflow, type `completed`) — never runs on a failed CI
+  - `publish-latest` job: fires when `head_branch == 'main'`; pushes `:latest` to DockerHub
+  - `publish-release` job: fires on `push` events (excludes PRs); uses `git tag --points-at <head_sha>` after `git fetch --tags` to detect any `v*` tag at the triggering commit — this is source-of-truth reliable, unlike `head_branch` which reflects the source branch rather than the tag on `workflow_run` events; derives and pushes `:x.y.z`, `:x.y`, `:x`; remaining steps skipped if no tag found
+  - Both jobs check out the triggering commit by `head_sha`, use `docker/setup-buildx-action`, log in via `DOCKERHUB_USERNAME` / `DOCKERHUB_ACCESS_TOKEN` secrets, and build with `docker/build-push-action`
+  - Platform: `linux/amd64`; uses GitHub Actions cache for Docker layer caching
+
+**Gate**: Both workflow files are syntactically valid YAML; CI runs successfully on push to `main`; Publish runs and image appears in DockerHub after CI passes.
+
+---
+
 ## Phase Dependency Graph
 
 ```mermaid
@@ -237,6 +259,8 @@ flowchart TD
 
     P9["Phase 9\nManagement Tools\n─────────────────────────\nstart · stop · remove\nremove_and_delete_data\nunit + integration tests"]
 
+    P10["Phase 10\nGitHub Actions CI/CD Pipeline\n─────────────────────────\nci.yml: quality gates + full pytest\npublish.yml: DockerHub :latest + semver\nworkflow_run gate on CI success"]
+
     URL[/"✓ Resolved Dependency\nDamn Small Linux 2024 RC6\n.torrent URL for Phase 6"/]
 
     P1 -->|gate: project installs| P2
@@ -249,6 +273,7 @@ flowchart TD
     P6 -->|gate: all tests pass| P7
     P7 -->|gate: smoke test passes| P8
     P8 -->|gate: all tests pass| P9
+    P9 -->|gate: all tests pass| P10
     URL -.->|required for integration test| P6
 
     style P2 fill:#d4edda,stroke:#28a745,color:#155724
