@@ -24,6 +24,14 @@ _COMPOSE_FILE = _PROJECT_ROOT / "docker-compose.test.yml"
 _HOST = os.environ.get("TRANSMISSION_TEST_HOST", "localhost")
 _PORT = int(os.environ.get("TRANSMISSION_TEST_PORT", "19091"))
 
+# Credentials: default to None (no auth) to match docker-compose.test.yml, which
+# intentionally omits USER/PASS so linuxserver/transmission starts with auth disabled.
+# Set these env vars if your image or config requires authentication.
+_raw_username = os.environ.get("TRANSMISSION_TEST_USERNAME", "")
+_USERNAME: str | None = _raw_username or None
+_raw_password = os.environ.get("TRANSMISSION_TEST_PASSWORD", "")
+_PASSWORD: str | None = _raw_password or None
+
 # Keep a generous timeout; container image pulls + init can be slow on first run.
 _TIMEOUT_SECONDS = int(os.environ.get("TRANSMISSION_TEST_TIMEOUT_SECONDS", "120"))
 
@@ -71,7 +79,7 @@ def _wait_for_transmission() -> Client:
 
     while time.monotonic() < deadline:
         try:
-            client = Client(host=_HOST, port=_PORT)
+            client = Client(host=_HOST, port=_PORT, username=_USERNAME, password=_PASSWORD)
             client.get_session()
             return client
         except Exception as exc:  # pragma: no cover (depends on timing/environment)
