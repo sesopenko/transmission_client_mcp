@@ -47,6 +47,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Update Docker Hub description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_ACCESS_TOKEN }}
+          repository: ${{ env.IMAGE }}
+          readme-filepath: ./repository-overview.md
+
   publish-release:
     name: Publish release
     runs-on: ubuntu-latest

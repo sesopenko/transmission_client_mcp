@@ -1,0 +1,109 @@
+# Transmission Client MCP
+
+An MCP server that exposes [Transmission](https://transmissionbt.com/) BitTorrent client controls as tools, allowing AI assistants to manage torrents on your behalf.
+
+[MCP (Model Context Protocol)](https://modelcontextprotocol.io/) is an open standard that lets AI assistants call external tools and services. This server implements MCP over HTTP/SSE so any MCP-compatible AI application can control your Transmission instance.
+
+GitHub: [sesopenko/transmission_client_mcp](https://github.com/sesopenko/transmission_client_mcp)
+
+---
+
+## Quick Start
+
+### Docker Compose
+
+1. Create a `docker-compose.yml`:
+
+   ```yaml
+   services:
+     transmission-mcp:
+       image: sesopenko/transmission_client_mcp:latest
+       ports:
+         - "8080:8080"
+       volumes:
+         - ./config.toml:/config/config.toml:ro
+       restart: unless-stopped
+   ```
+
+2. Copy the example config and edit it:
+
+   ```bash
+   cp config.toml.example config.toml
+   ```
+
+3. Start the server:
+
+   ```bash
+   docker compose up -d
+   ```
+
+---
+
+## Configuration
+
+Create a `config.toml` in the working directory (or pass `--config <path>`):
+
+```toml
+[transmission]
+host = "localhost"     # hostname or IP of your Transmission instance
+port = 9091            # Transmission RPC port (default: 9091)
+username = "transmission" # RPC username (set in Transmission preferences)
+password = "password"  # RPC password (set in Transmission preferences)
+
+[server]
+host = "0.0.0.0"       # address the MCP server listens on (0.0.0.0 = all interfaces)
+port = 8080            # port the MCP server listens on
+
+[logging]
+level = "info"         # log verbosity: debug, info, warning, error
+```
+
+---
+
+## Connecting an AI Application
+
+Point your MCP-compatible AI application at the server's MCP endpoint:
+
+```
+http://<host>:<port>/mcp
+```
+
+For example, if the server is running on `192.168.1.10` with the default port:
+
+```
+http://192.168.1.10:8080/mcp
+```
+
+Consult your AI application's documentation for how to register an MCP server.
+
+---
+
+## Available Tools
+
+| Tool | Description |
+|---|---|
+| `list_torrents` | List all torrents managed by Transmission, sorted by date added (oldest first). |
+| `add_torrent` | Add a torrent by magnet link or HTTP/HTTPS URL, with an optional download directory override. |
+| `get_torrent` | Fetch detailed information for a single torrent by name, including file list, save path, ratio, and error state. |
+| `start_torrent` | Start or resume a paused torrent by name. |
+| `stop_torrent` | Stop or pause an active torrent by name. |
+| `remove_torrent` | Remove a torrent by name, keeping all downloaded data on disk. |
+| `remove_torrent_and_delete_data` | Remove a torrent by name and permanently delete all downloaded data. |
+
+---
+
+## Security
+
+This server has **no authentication** on its MCP endpoint. It is designed for LAN use only.
+
+**Do not expose this server directly to the internet.**
+
+If you need to access it remotely, place it behind a reverse proxy that handles TLS termination and access control.
+
+---
+
+## License
+
+Copyright (c) Sean Esopenko 2026
+
+Licensed under the [GNU General Public License v3.0](https://github.com/sesopenko/transmission_client_mcp/blob/main/LICENSE.txt).
