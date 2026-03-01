@@ -10,10 +10,7 @@ _SILENT_LOGGER = make_logger("critical")
 # Damn Small Linux 2024 RC6 — small, well-seeded public torrent used for integration
 # testing. Same URL used by test_add_torrent.py.
 _DSL_TORRENT_URL = (
-    "https://linuxtracker.org/download.php"
-    "?id=9a9f19345e31afd1dc9a5caaedf7982459900498"
-    "&f=Damn+Small+Linux+2024+RC6+ISO.torrent"
-    "&key=6c2d037a"
+    "https://raw.githubusercontent.com/sesopenko/transmission_client_mcp/main/tests/fixtures/dsl-2024.rc6.iso.torrent"
 )
 _DSL_TORRENT_NAME = "dsl-2024.rc6.iso"
 
