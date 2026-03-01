@@ -76,7 +76,8 @@ uv run pytest tests/unit/
 
 ### Integration tests
 
-Requires a running Transmission instance (see `docker-compose.test.yml`).
+Requires Docker. The test harness automatically starts and stops a Transmission
+container (`docker-compose.test.yml`) for the duration of the test session.
 
 ```bash
 uv run pytest tests/integration/

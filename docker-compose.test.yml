@@ -1,0 +1,9 @@
+services:
+  transmission:
+    image: lscr.io/linuxserver/transmission:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=UTC
+    ports:
+      - "19091:9091"
