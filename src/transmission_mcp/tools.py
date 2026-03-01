@@ -337,7 +337,7 @@ def _find_unique_torrent(torrents: list[Torrent], name: str) -> Torrent | dict:
     matches = [t for t in torrents if (t.name or "").lower() == name.lower()]
 
     if not matches:
-        return {"error": f"No torrent found matching '{name}'"}
+        return {"error": f"No torrent found matching '[{name}]'"}
 
     if len(matches) > 1:
         match_list = [
@@ -348,7 +348,7 @@ def _find_unique_torrent(torrents: list[Torrent], name: str) -> Torrent | dict:
             for t in matches
         ]
         return {
-            "error": f"Multiple torrents found matching '{name}'",
+            "error": f"Multiple torrents found matching '[{name}]'",
             "matches": match_list,
         }
 

@@ -44,10 +44,10 @@ class TestFindUniqueTorrent:
         assert isinstance(result, dict)
         assert "error" in result
 
-    def test_no_match_error_contains_name(self):
+    def test_no_match_error_format(self):
         result = tools._find_unique_torrent([], "ghost")
         assert isinstance(result, dict)
-        assert "ghost" in result["error"]
+        assert result["error"] == "No torrent found matching '[ghost]'"
 
     def test_duplicate_returns_error_dict(self):
         t1 = _make_torrent(name="Same")
@@ -258,6 +258,13 @@ class TestRemoveTorrent:
         tools.remove_torrent(client, logger, "Test Torrent")
         logger.info.assert_called_once_with("remove_torrent invoked", tool="remove_torrent", name="Test Torrent")
 
+    def test_result_logged_at_debug(self):
+        client = MagicMock()
+        client.get_torrents.return_value = [_make_torrent()]
+        logger = _make_logger()
+        tools.remove_torrent(client, logger, "Test Torrent")
+        logger.debug.assert_called_once()
+
 
 # ---------------------------------------------------------------------------
 # remove_torrent_and_delete_data
@@ -315,6 +322,13 @@ class TestRemoveTorrentAndDeleteData:
             tool="remove_torrent_and_delete_data",
             name="Test Torrent",
         )
+
+    def test_result_logged_at_debug(self):
+        client = MagicMock()
+        client.get_torrents.return_value = [_make_torrent()]
+        logger = _make_logger()
+        tools.remove_torrent_and_delete_data(client, logger, "Test Torrent")
+        logger.debug.assert_called_once()
 
     def test_does_not_call_delete_data_false(self):
         """Verify delete_data=False is never passed (it must be True)."""

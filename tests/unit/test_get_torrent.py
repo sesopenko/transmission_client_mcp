@@ -202,7 +202,7 @@ class TestGetTorrentNoMatch:
         client = MagicMock()
         client.get_torrents.return_value = []
         result = tools.get_torrent(client, _make_logger(), "ghost")
-        assert result["error"] == "No torrent found matching 'ghost'"
+        assert result["error"] == "No torrent found matching '[ghost]'"
 
     def test_no_torrents_key_in_error_result(self):
         client = MagicMock()
