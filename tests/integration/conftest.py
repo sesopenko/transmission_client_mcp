@@ -20,6 +20,33 @@ from transmission_rpc import Client
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _COMPOSE_FILE = _PROJECT_ROOT / "docker-compose.test.yml"
 
+
+def _detect_compose_cmd() -> list[str]:
+    """Return the available Docker Compose command prefix.
+
+    Tries the modern plugin form first ('docker compose'), then the legacy
+    standalone binary ('docker-compose'). Raises RuntimeError if neither
+    is available so failures are caught early with a clear message.
+
+    Returns:
+        List of strings forming the compose command prefix, e.g.
+        ``["docker", "compose"]`` or ``["docker-compose"]``.
+    """
+    for candidate in (["docker", "compose"], ["docker-compose"]):
+        try:
+            subprocess.run(
+                candidate + ["version"],
+                check=True,
+                capture_output=True,
+            )
+            return candidate
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            continue
+    raise RuntimeError("Neither 'docker compose' nor 'docker-compose' is available")
+
+
+_COMPOSE_CMD = _detect_compose_cmd()
+
 # Keep default localhost mapping, but allow overrides to support CI/remote Docker.
 _HOST = os.environ.get("TRANSMISSION_TEST_HOST", "localhost")
 _PORT = int(os.environ.get("TRANSMISSION_TEST_PORT", "19091"))
@@ -58,7 +85,7 @@ def transmission_client() -> Iterator[Client]:
 
 def _compose_up() -> None:
     subprocess.run(
-        ["docker", "compose", "-f", str(_COMPOSE_FILE), "up", "-d", "--wait"],
+        [*_COMPOSE_CMD, "-f", str(_COMPOSE_FILE), "up", "-d", "--wait"],
         check=True,
         cwd=_PROJECT_ROOT,
     )
@@ -66,7 +93,7 @@ def _compose_up() -> None:
 
 def _compose_down() -> None:
     subprocess.run(
-        ["docker", "compose", "-f", str(_COMPOSE_FILE), "down", "-v"],
+        [*_COMPOSE_CMD, "-f", str(_COMPOSE_FILE), "down", "-v"],
         check=True,
         cwd=_PROJECT_ROOT,
     )

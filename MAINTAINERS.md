@@ -76,12 +76,26 @@ uv run pytest tests/unit/
 
 ### Integration tests
 
-Requires Docker. The test harness automatically starts and stops a Transmission
-container (`docker-compose.test.yml`) for the duration of the test session.
+Requires Docker with either the modern Compose plugin (`docker compose`) or the
+legacy standalone binary (`docker-compose`). The harness auto-detects which is
+available at startup and fails fast with a clear message if neither is found.
+
+The harness automatically starts and stops a Transmission container
+(`docker-compose.test.yml`) for the duration of the test session.
 
 ```bash
 uv run pytest tests/integration/
 ```
+
+#### Optional environment variables
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `TRANSMISSION_TEST_HOST` | `localhost` | Transmission RPC host |
+| `TRANSMISSION_TEST_PORT` | `19091` | Transmission RPC port |
+| `TRANSMISSION_TEST_USERNAME` | _(none)_ | RPC username, if auth is enabled |
+| `TRANSMISSION_TEST_PASSWORD` | _(none)_ | RPC password, if auth is enabled |
+| `TRANSMISSION_TEST_TIMEOUT_SECONDS` | `120` | Seconds to wait for container readiness |
 
 ### All tests
 
