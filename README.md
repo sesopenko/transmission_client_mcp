@@ -2,6 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE.txt)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13%2B-blue)](https://www.python.org/downloads/)
+[![CI](https://github.com/sesopenko/transmission_client_mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/sesopenko/transmission_client_mcp/actions/workflows/ci.yml)
 
 An MCP server that exposes [Transmission](https://transmissionbt.com/) BitTorrent client controls as tools, allowing AI assistants to manage torrents on your behalf.
 
