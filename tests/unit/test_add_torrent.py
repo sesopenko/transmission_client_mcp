@@ -30,6 +30,7 @@ def _make_client(
     client.get_session.return_value = session
 
     torrent = MagicMock()
+    torrent.id = 42
     torrent.name = "Example Torrent"
     torrent.status = "downloading"
     torrent.total_size = 1_073_741_824  # 1 GB
@@ -69,6 +70,11 @@ class TestAddTorrentMagnetValid:
         call_kwargs = client.add_torrent.call_args.kwargs
         assert call_kwargs.get("torrent") == _VALID_MAGNET
 
+    def test_does_not_fetch_full_torrent_for_magnet(self):
+        client = _make_client()
+        tools.add_torrent(client, _make_logger(), _VALID_MAGNET)
+        client.get_torrent.assert_not_called()
+
 
 class TestAddTorrentUrlValid:
     def test_returns_success_message(self):
@@ -97,6 +103,12 @@ class TestAddTorrentUrlValid:
         client.add_torrent.assert_called_once()
         call_kwargs = client.add_torrent.call_args.kwargs
         assert call_kwargs.get("torrent") == _VALID_URL
+
+    def test_fetches_full_torrent_using_id_from_add_response(self):
+        """get_torrent must be called with the id from the add_torrent response."""
+        client = _make_client()
+        tools.add_torrent(client, _make_logger(), _VALID_URL)
+        client.get_torrent.assert_called_once_with(42)
 
 
 class TestAddTorrentInvalidInput:
@@ -193,6 +205,34 @@ class TestAddTorrentDuplicate:
         with pytest.raises(Exception, match="Connection refused"):
             tools.add_torrent(client, logger, _VALID_URL)
         logger.error.assert_called_once()
+
+
+class TestAddTorrentStartBehavior:
+    def test_start_added_true_adds_unpaused(self):
+        """When Transmission is set to start added torrents, paused must be False."""
+        client = _make_client(start_added=True)
+        tools.add_torrent(client, _make_logger(), _VALID_URL)
+        assert client.add_torrent.call_args.kwargs.get("paused") is False
+
+    def test_start_added_false_adds_paused(self):
+        """When Transmission is set to NOT start added torrents, paused must be True."""
+        client = _make_client(start_added=False)
+        tools.add_torrent(client, _make_logger(), _VALID_URL)
+        assert client.add_torrent.call_args.kwargs.get("paused") is True
+
+    def test_start_added_none_starts_immediately(self):
+        """When the session setting is None, default to unpaused (start immediately)."""
+        client = _make_client()
+        client.get_session.return_value.start_added_torrents = None
+        tools.add_torrent(client, _make_logger(), _VALID_URL)
+        assert client.add_torrent.call_args.kwargs.get("paused") is False
+
+    def test_session_failure_starts_immediately(self):
+        """When the session is inaccessible, default to unpaused (start immediately)."""
+        client = _make_client()
+        client.get_session.side_effect = Exception("Cannot connect")
+        tools.add_torrent(client, _make_logger(), _VALID_URL)
+        assert client.add_torrent.call_args.kwargs.get("paused") is False
 
 
 class TestAddTorrentLogging:
