@@ -42,11 +42,27 @@ These checks also run automatically on every commit via pre-commit hooks.
 
 ## Running the Server
 
+### Locally
+
 ```bash
 uv run python -m transmission_mcp
 ```
 
 Pass `--config <path>` to use a non-default config file location.
+
+### Via Docker
+
+Build the image:
+
+```bash
+docker build -t transmission-mcp .
+```
+
+Start the server (requires `config.toml` in the current directory):
+
+```bash
+docker compose up
+```
 
 ---
 
@@ -70,6 +86,14 @@ uv run pytest tests/integration/
 
 ```bash
 uv run pytest
+```
+
+### Docker build and compose
+
+Verifies that the `Dockerfile` builds successfully and that `docker compose up` starts the server. Cleans up after itself.
+
+```bash
+bash scripts/test-docker.sh
 ```
 
 ---
