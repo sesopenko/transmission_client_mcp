@@ -43,6 +43,29 @@ def list_torrents() -> dict:
     return tools.list_torrents(_client, _logger)
 
 
+@mcp.tool()
+def add_torrent(torrent_input: str, download_dir: str | None = None) -> dict:
+    """Add a torrent to Transmission by magnet link or HTTP/HTTPS URL.
+
+    Args:
+        torrent_input: A magnet link (``magnet:?xt=urn:...``) or HTTP/HTTPS URL
+            pointing to a ``.torrent`` file. Local file paths are not supported.
+        download_dir: Optional directory override for saving torrent files. Must be
+            within Transmission's configured default download directory. Omit to use
+            the session default.
+
+    Returns:
+        A dict with a ``message`` key confirming success. For URL inputs, also
+        includes ``name``, ``status``, and ``size`` once Transmission resolves the
+        metadata. Magnet link responses contain only ``message``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.add_torrent(_client, _logger, torrent_input, download_dir)
+
+
 def main() -> None:
     """Parse CLI arguments, load configuration, and start the MCP server."""
     parser = argparse.ArgumentParser(description="Transmission MCP server")

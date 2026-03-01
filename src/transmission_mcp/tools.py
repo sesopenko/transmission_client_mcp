@@ -1,7 +1,9 @@
 """MCP tool implementations for the Transmission MCP server."""
 
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any, cast
+from urllib.parse import parse_qs, urlparse
 
 from transmission_rpc import Client, Torrent
 
@@ -43,6 +45,145 @@ def list_torrents(client: Client, logger: Logger) -> dict:
     result_list = [_format_torrent(t) for t in sorted_torrents]
     logger.debug("list_torrents result", torrent_count=len(result_list))
     return {"torrents": result_list}
+
+
+def add_torrent(
+    client: Client,
+    logger: Logger,
+    torrent_input: str,
+    download_dir: str | None = None,
+) -> dict:
+    """Add a torrent to Transmission by magnet link or HTTP/HTTPS URL.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        torrent_input: A magnet link (``magnet:?xt=urn:...``) or HTTP/HTTPS URL
+            pointing to a ``.torrent`` file.
+        download_dir: Optional directory override for saving torrent files. Must be
+            within Transmission's configured default download directory. Omit to use
+            the session default.
+
+    Returns:
+        A dict with a ``message`` key confirming success. For HTTP/HTTPS URL inputs,
+        also includes ``name``, ``status``, and ``size`` (human-readable) once
+        Transmission has resolved the torrent metadata. Magnet link responses contain
+        only ``message`` because metadata requires peer discovery.
+
+    Raises:
+        ValueError: If ``torrent_input`` is not a valid magnet link or HTTP/HTTPS URL,
+            or if ``download_dir`` is outside Transmission's default download directory.
+        Exception: If the Transmission RPC call fails with a non-duplicate error
+            (logged at ``error`` before re-raising so the caller receives it verbatim).
+    """
+    logger.info("add_torrent invoked", tool="add_torrent", input=torrent_input)
+    _validate_torrent_input(torrent_input)
+
+    if download_dir is not None:
+        _validate_download_dir(client, download_dir)
+
+    paused = _resolve_paused(client)
+    is_magnet = torrent_input.startswith("magnet:")
+
+    kwargs: dict[str, Any] = {"torrent": torrent_input, "paused": paused}
+    if download_dir is not None:
+        kwargs["download_dir"] = download_dir
+
+    try:
+        torrent = client.add_torrent(**kwargs)
+    except Exception as exc:
+        if "duplicate" in str(exc).lower():
+            logger.debug("add_torrent duplicate torrent, treating as success")
+            return {"message": "Torrent added successfully"}
+        logger.error("Transmission error in add_torrent", error=str(exc))
+        raise
+
+    if is_magnet:
+        logger.debug("add_torrent result", type="magnet")
+        return {"message": "Torrent added successfully"}
+
+    # The torrent-add RPC response only contains id/name/hashString; fetch the
+    # full torrent to obtain status and total_size.
+    full_torrent = client.get_torrent(torrent.id)
+    name = full_torrent.name or ""
+    status = full_torrent.status or ""
+    size = _human_readable_size(full_torrent.total_size or 0)
+    logger.debug("add_torrent result", name=name, status=status)
+    return {
+        "message": "Torrent added successfully",
+        "name": name,
+        "status": status,
+        "size": size,
+    }
+
+
+def _validate_torrent_input(torrent_input: str) -> None:
+    """Validate that the input is a well-formed magnet link or HTTP/HTTPS URL.
+
+    Args:
+        torrent_input: The torrent input string to validate.
+
+    Raises:
+        ValueError: If the input is not a valid magnet link or HTTP/HTTPS URL.
+    """
+    if torrent_input.startswith("magnet:"):
+        params = parse_qs(urlparse(torrent_input).query)
+        xt_values = params.get("xt", [])
+        if not any(v.startswith("urn:") for v in xt_values):
+            raise ValueError("Invalid magnet link: must contain at least one 'xt=urn:...' parameter")
+    elif torrent_input.startswith(("http://", "https://")):
+        if not urlparse(torrent_input).netloc:
+            raise ValueError("Invalid URL: missing host")
+    else:
+        raise ValueError("Input must be a magnet link (magnet:?xt=urn:...) or HTTP/HTTPS URL")
+
+
+def _validate_download_dir(client: Client, download_dir: str) -> None:
+    """Enforce that download_dir is within Transmission's default download directory.
+
+    Args:
+        client: Transmission RPC client used to fetch the session default directory.
+        download_dir: The requested download directory path to validate.
+
+    Raises:
+        ValueError: If ``download_dir`` is outside Transmission's default directory.
+    """
+    try:
+        default_dir: str | None = client.get_session().download_dir
+    except Exception:
+        return  # Session not accessible; skip check
+
+    if not default_dir:
+        return
+
+    try:
+        Path(download_dir).relative_to(Path(default_dir))
+    except ValueError:
+        raise ValueError(
+            f"download_dir '{download_dir}' is outside the Transmission default download directory '{default_dir}'"
+        ) from None
+
+
+def _resolve_paused(client: Client) -> bool:
+    """Determine whether to add the torrent in paused state.
+
+    Reads ``start_added_torrents`` from the Transmission session. Returns ``False``
+    (start immediately) if the setting is inaccessible.
+
+    Args:
+        client: Transmission RPC client used to fetch session settings.
+
+    Returns:
+        ``True`` if the torrent should be added paused, ``False`` otherwise.
+    """
+    try:
+        start_added: bool | None = client.get_session().start_added_torrents
+    except Exception:
+        return False
+
+    if start_added is None:
+        return False
+    return not start_added
 
 
 def _format_torrent(torrent: Torrent) -> dict:
