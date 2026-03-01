@@ -66,6 +66,30 @@ def add_torrent(torrent_input: str, download_dir: str | None = None) -> dict:
     return tools.add_torrent(_client, _logger, torrent_input, download_dir)
 
 
+@mcp.tool()
+def get_torrent(name: str) -> dict:
+    """Fetch detailed information for a single torrent by name.
+
+    Args:
+        name: The exact torrent name to look up (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: a dict with all ``list_torrents`` fields plus ``save_path``,
+        ``ratio``, ``files`` (list of file name/size/progress), and
+        ``error_message`` (error string or null).
+
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.get_torrent(_client, _logger, name)
+
+
 def main() -> None:
     """Parse CLI arguments, load configuration, and start the MCP server."""
     parser = argparse.ArgumentParser(description="Transmission MCP server")

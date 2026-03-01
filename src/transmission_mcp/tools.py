@@ -117,6 +117,82 @@ def add_torrent(
     }
 
 
+def get_torrent(client: Client, logger: Logger, name: str) -> dict:
+    """Fetch detailed information for a single torrent by case-insensitive name match.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        name: Torrent name to look up. Matched case-insensitively against exact names.
+
+    Returns:
+        On success: a dict containing all ``list_torrents`` fields for the matched
+        torrent, plus ``save_path`` (string), ``ratio`` (formatted string),
+        ``files`` (list of dicts with ``name``, ``size``, and ``progress``), and
+        ``error_message`` (error string or null).
+
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+
+        On duplicate match: ``{"error": "Multiple torrents found matching '[name]'",
+        "matches": [{"added_on": ..., "size": ...}, ...]}``.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("get_torrent invoked", tool="get_torrent", name=name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in get_torrent", error=str(exc))
+        raise
+
+    matches = [t for t in torrents if (t.name or "").lower() == name.lower()]
+
+    if not matches:
+        return {"error": f"No torrent found matching '{name}'"}
+
+    if len(matches) > 1:
+        match_list = [
+            {
+                "added_on": t.added_date.isoformat() if t.added_date else None,
+                "size": _human_readable_size(t.total_size or 0),
+            }
+            for t in matches
+        ]
+        return {
+            "error": f"Multiple torrents found matching '{name}'",
+            "matches": match_list,
+        }
+
+    torrent = matches[0]
+    result = _format_torrent(torrent)
+    result["save_path"] = torrent.download_dir or ""
+    ratio_val = torrent.upload_ratio
+    result["ratio"] = f"{ratio_val:.2f}" if ratio_val >= 0 else "0.00"
+    result["files"] = _format_files(torrent)
+    result["error_message"] = torrent.error_string if torrent.error else None
+
+    logger.debug("get_torrent result", name=torrent.name)
+    return result
+
+
+def _format_files(torrent: Torrent) -> list[dict]:
+    result = []
+    for f in torrent.get_files():
+        size_bytes = f.size or 0
+        completed_bytes = f.completed or 0
+        progress = f"{(completed_bytes / size_bytes * 100):.1f}%" if size_bytes > 0 else "0.0%"
+        result.append(
+            {
+                "name": f.name or "",
+                "size": _human_readable_size(size_bytes),
+                "progress": progress,
+            }
+        )
+    return result
+
+
 def _validate_torrent_input(torrent_input: str) -> None:
     """Validate that the input is a well-formed magnet link or HTTP/HTTPS URL.
 

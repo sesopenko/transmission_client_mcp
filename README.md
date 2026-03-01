@@ -102,6 +102,7 @@ Consult your AI application's documentation for how to register an MCP server.
 |---|---|
 | `list_torrents` | List all torrents managed by Transmission, sorted by date added (oldest first). |
 | `add_torrent` | Add a torrent by magnet link or HTTP/HTTPS URL, with an optional download directory override. |
+| `get_torrent` | Fetch detailed information for a single torrent by name, including file list, save path, ratio, and error state. |
 
 > Tools are documented here as they are implemented.
 
