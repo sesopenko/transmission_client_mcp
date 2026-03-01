@@ -3,7 +3,7 @@
 ## Project Information
 - **Project Type**: Greenfield
 - **Start Date**: 2026-02-28T00:00:00Z
-- **Current Stage**: CONSTRUCTION - Phase 6 COMPLETE — Awaiting Phase 7 (list_torrents smoke test)
+- **Current Stage**: CONSTRUCTION - Phase 7 COMPLETE — Awaiting Phase 8 (get_torrent)
 
 ## Workspace State
 - **Existing Code**: No
@@ -36,7 +36,7 @@
 - [x] Phase 4: Docker Integration Test Harness (NFR) — COMPLETED 2026-02-28
 - [x] Phase 5: MCP Server Bootstrap + list_torrents — COMPLETED 2026-02-28
 - [x] Phase 6: add_torrent — COMPLETED 2026-02-28
-- [ ] Phase 7: list_torrents integration smoke test — PENDING
+- [x] Phase 7: list_torrents integration smoke test — COMPLETED 2026-02-28
 - [ ] Phase 8: get_torrent — PENDING
 - [ ] Phase 9: Management Tools — PENDING
 - [ ] Build and Test — PENDING

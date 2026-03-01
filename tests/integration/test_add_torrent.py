@@ -15,6 +15,7 @@ _DSL_TORRENT_URL = (
     "&f=Damn+Small+Linux+2024+RC6+ISO.torrent"
     "&key=6c2d037a"
 )
+_DSL_TORRENT_NAME = "dsl-2024.rc6.iso"
 
 
 def _remove_all_torrents(client: Client) -> None:
@@ -31,7 +32,7 @@ class TestAddTorrentUrlIntegration:
         try:
             result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
             assert result["message"] == "Torrent added successfully"
-            assert "name" in result and result["name"]
+            assert result.get("name") == _DSL_TORRENT_NAME
             assert "status" in result
             assert "size" in result
         finally:
