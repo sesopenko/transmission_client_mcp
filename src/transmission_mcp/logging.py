@@ -42,6 +42,7 @@ class Logger:
         self._min_index: int = _level_index(level)
 
     def _emit(self, severity: str, message: str, metadata: dict[str, Any]) -> None:
+        severity = severity.lower()
         if _level_index(severity) < self._min_index:
             return
         entry: dict[str, Any] = {

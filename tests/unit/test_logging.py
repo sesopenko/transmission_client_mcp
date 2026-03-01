@@ -2,6 +2,7 @@
 
 import json
 from datetime import UTC, datetime
+from typing import Any
 
 import pytest
 
@@ -19,7 +20,7 @@ def emit_at(logger: Logger, level: str, message: str, **metadata: object) -> Non
     getattr(logger, level)(message, **metadata)
 
 
-def captured_entries(capsys: pytest.CaptureFixture[str]) -> list[dict[object, object]]:
+def captured_entries(capsys: pytest.CaptureFixture[str]) -> list[dict[str, Any]]:
     """Return all JSON entries written to stdout since the last capture."""
     out = capsys.readouterr().out
     return [json.loads(line) for line in out.splitlines() if line.strip()]
