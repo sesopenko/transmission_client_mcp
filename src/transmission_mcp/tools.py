@@ -147,6 +147,193 @@ def get_torrent(client: Client, logger: Logger, name: str) -> dict:
         logger.error("Transmission error in get_torrent", error=str(exc))
         raise
 
+    found = _find_unique_torrent(torrents, name)
+    if isinstance(found, dict):
+        return found
+
+    torrent = found
+    result = _format_torrent(torrent)
+    result["save_path"] = torrent.download_dir or ""
+    ratio_val = torrent.upload_ratio
+    result["ratio"] = f"{ratio_val:.2f}" if ratio_val is not None and ratio_val >= 0 else "0.00"
+    result["files"] = _format_files(torrent)
+    result["error_message"] = torrent.error_string if torrent.error else None
+
+    logger.debug("get_torrent result", name=torrent.name)
+    return result
+
+
+def start_torrent(client: Client, logger: Logger, name: str) -> dict:
+    """Start or resume a paused torrent by case-insensitive name match.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        name: Torrent name to start. Matched case-insensitively against exact names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' started successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "Multiple torrents found matching '[name]'",
+        "matches": [{"added_on": ..., "size": ...}, ...]}``.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("start_torrent invoked", tool="start_torrent", name=name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in start_torrent", error=str(exc))
+        raise
+
+    found = _find_unique_torrent(torrents, name)
+    if isinstance(found, dict):
+        return found
+
+    try:
+        client.start_torrent(found.id)
+    except Exception as exc:
+        logger.error("Transmission error in start_torrent", error=str(exc))
+        raise
+
+    torrent_name = found.name or name
+    logger.debug("start_torrent result", name=torrent_name)
+    return {"message": f"Torrent '{torrent_name}' started successfully"}
+
+
+def stop_torrent(client: Client, logger: Logger, name: str) -> dict:
+    """Stop or pause an active torrent by case-insensitive name match.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        name: Torrent name to stop. Matched case-insensitively against exact names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' stopped successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "Multiple torrents found matching '[name]'",
+        "matches": [{"added_on": ..., "size": ...}, ...]}``.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("stop_torrent invoked", tool="stop_torrent", name=name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in stop_torrent", error=str(exc))
+        raise
+
+    found = _find_unique_torrent(torrents, name)
+    if isinstance(found, dict):
+        return found
+
+    try:
+        client.stop_torrent(found.id)
+    except Exception as exc:
+        logger.error("Transmission error in stop_torrent", error=str(exc))
+        raise
+
+    torrent_name = found.name or name
+    logger.debug("stop_torrent result", name=torrent_name)
+    return {"message": f"Torrent '{torrent_name}' stopped successfully"}
+
+
+def remove_torrent(client: Client, logger: Logger, name: str) -> dict:
+    """Remove a torrent by case-insensitive name match, keeping downloaded data.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        name: Torrent name to remove. Matched case-insensitively against exact names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' removed successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "Multiple torrents found matching '[name]'",
+        "matches": [{"added_on": ..., "size": ...}, ...]}``.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("remove_torrent invoked", tool="remove_torrent", name=name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in remove_torrent", error=str(exc))
+        raise
+
+    found = _find_unique_torrent(torrents, name)
+    if isinstance(found, dict):
+        return found
+
+    try:
+        client.remove_torrent(found.id, delete_data=False)
+    except Exception as exc:
+        logger.error("Transmission error in remove_torrent", error=str(exc))
+        raise
+
+    torrent_name = found.name or name
+    logger.debug("remove_torrent result", name=torrent_name)
+    return {"message": f"Torrent '{torrent_name}' removed successfully"}
+
+
+def remove_torrent_and_delete_data(client: Client, logger: Logger, name: str) -> dict:
+    """Remove a torrent and permanently delete all downloaded data.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        name: Torrent name to remove. Matched case-insensitively against exact names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' removed and data deleted successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "Multiple torrents found matching '[name]'",
+        "matches": [{"added_on": ..., "size": ...}, ...]}``.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("remove_torrent_and_delete_data invoked", tool="remove_torrent_and_delete_data", name=name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in remove_torrent_and_delete_data", error=str(exc))
+        raise
+
+    found = _find_unique_torrent(torrents, name)
+    if isinstance(found, dict):
+        return found
+
+    try:
+        client.remove_torrent(found.id, delete_data=True)
+    except Exception as exc:
+        logger.error("Transmission error in remove_torrent_and_delete_data", error=str(exc))
+        raise
+
+    torrent_name = found.name or name
+    logger.debug("remove_torrent_and_delete_data result", name=torrent_name)
+    return {"message": f"Torrent '{torrent_name}' removed and data deleted successfully"}
+
+
+def _find_unique_torrent(torrents: list[Torrent], name: str) -> Torrent | dict:
+    """Find exactly one torrent matching the given name (case-insensitive).
+
+    Args:
+        torrents: Full list of torrents to search.
+        name: Name to match case-insensitively.
+
+    Returns:
+        The matched ``Torrent`` on a unique match.
+        An error dict on no match or duplicate match.
+    """
     matches = [t for t in torrents if (t.name or "").lower() == name.lower()]
 
     if not matches:
@@ -165,16 +352,7 @@ def get_torrent(client: Client, logger: Logger, name: str) -> dict:
             "matches": match_list,
         }
 
-    torrent = matches[0]
-    result = _format_torrent(torrent)
-    result["save_path"] = torrent.download_dir or ""
-    ratio_val = torrent.upload_ratio
-    result["ratio"] = f"{ratio_val:.2f}" if ratio_val is not None and ratio_val >= 0 else "0.00"
-    result["files"] = _format_files(torrent)
-    result["error_message"] = torrent.error_string if torrent.error else None
-
-    logger.debug("get_torrent result", name=torrent.name)
-    return result
+    return matches[0]
 
 
 def _format_files(torrent: Torrent) -> list[dict]:

@@ -103,6 +103,10 @@ Consult your AI application's documentation for how to register an MCP server.
 | `list_torrents` | List all torrents managed by Transmission, sorted by date added (oldest first). |
 | `add_torrent` | Add a torrent by magnet link or HTTP/HTTPS URL, with an optional download directory override. |
 | `get_torrent` | Fetch detailed information for a single torrent by name, including file list, save path, ratio, and error state. |
+| `start_torrent` | Start or resume a paused torrent by name. |
+| `stop_torrent` | Stop or pause an active torrent by name. |
+| `remove_torrent` | Remove a torrent by name, keeping all downloaded data on disk. |
+| `remove_torrent_and_delete_data` | Remove a torrent by name and permanently delete all downloaded data. |
 
 > Tools are documented here as they are implemented.
 

@@ -90,6 +90,86 @@ def get_torrent(name: str) -> dict:
     return tools.get_torrent(_client, _logger, name)
 
 
+@mcp.tool()
+def start_torrent(name: str) -> dict:
+    """Start or resume a paused torrent by name.
+
+    Args:
+        name: The exact torrent name to start (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' started successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.start_torrent(_client, _logger, name)
+
+
+@mcp.tool()
+def stop_torrent(name: str) -> dict:
+    """Stop or pause an active torrent by name.
+
+    Args:
+        name: The exact torrent name to stop (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' stopped successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.stop_torrent(_client, _logger, name)
+
+
+@mcp.tool()
+def remove_torrent(name: str) -> dict:
+    """Remove a torrent by name, keeping all downloaded data on disk.
+
+    Args:
+        name: The exact torrent name to remove (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' removed successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.remove_torrent(_client, _logger, name)
+
+
+@mcp.tool()
+def remove_torrent_and_delete_data(name: str) -> dict:
+    """Remove a torrent by name and permanently delete all downloaded data.
+
+    Args:
+        name: The exact torrent name to remove (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: ``{"message": "Torrent '<name>' removed and data deleted successfully"}``.
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.remove_torrent_and_delete_data(_client, _logger, name)
+
+
 def main() -> None:
     """Parse CLI arguments, load configuration, and start the MCP server."""
     parser = argparse.ArgumentParser(description="Transmission MCP server")
