@@ -23,3 +23,4 @@ It is automatically pushed to Docker Hub on every merge to `main`. Keep it accur
 - Do not add a tool row until the tool is implemented and its tests pass
 - Do not remove rows for tools that have been implemented
 - Do not rewrite the Example System Prompt from scratch; make the minimum edits needed to keep it accurate
+- Do not remove the **Acknowledgement: Riding on the Backs of Giants** section; it is permanent

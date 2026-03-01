@@ -179,3 +179,15 @@ See [MAINTAINERS.md](MAINTAINERS.md) for setup, development commands, and how to
 Copyright (c) Sean Esopenko 2026
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE.txt).
+
+---
+
+## Acknowledgement: Riding on the Backs of Giants
+
+This project was built with the assistance of [Claude Code](https://claude.ai/code), an AI coding assistant developed by Anthropic.
+
+AI assistants like Claude are trained on enormous amounts of data — much of it written by the open-source community: the libraries, tools, documentation, and decades of shared knowledge that developers have contributed freely. Without that foundation, tools like this would not be possible.
+
+In recognition of that debt, this project is released under the [GNU General Public License v3.0](LICENSE.txt). The GPL ensures that this code — and any derivative work — remains open source. It is a small act of reciprocity: giving back to the commons that made it possible.
+
+To every developer who ever pushed a commit to a public repo, wrote a Stack Overflow answer, or published a package under an open license — thank you.
