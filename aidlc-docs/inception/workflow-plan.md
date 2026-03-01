@@ -138,45 +138,9 @@ Approved requirements: `aidlc-docs/inception/requirements/requirements.md`
 
 ---
 
-### Phase 6 — `get_torrent`
+### Phase 6 — `add_torrent`
 
-**Goal**: Implement single-torrent lookup with name matching semantics.
-
-**Deliverables**:
-- `get_torrent` MCP tool:
-  - Lookup: case-insensitive exact name match
-  - Returns all `list_torrents` fields plus: `save_path`, `ratio` ("1.24"), `files` (name, human-readable size, progress %), `error_message` (string or null)
-  - No match: error `"No torrent found matching '[name]'"`
-  - Duplicate match: error listing each match with `added_on` and `size`
-- Unit tests: mock `transmission-rpc`, cover normal match, no match, duplicate match, case-insensitivity
-- Integration tests: verify lookup against Docker Transmission
-
-**Gate**: All unit and integration tests pass.
-
----
-
-### Phase 7 — Torrent Management Tools (`start`, `stop`, `remove`)
-
-**Goal**: Implement the four management operations that act on existing torrents.
-
-**Deliverables**:
-- `start_torrent` MCP tool (starts/resumes by name; case-insensitive)
-- `stop_torrent` MCP tool (stops/pauses by name; case-insensitive)
-- `remove_torrent` MCP tool (removes torrent, keeps downloaded data; by name)
-- `remove_torrent_and_delete_data` MCP tool (removes torrent + deletes data; by name)
-- All tools: pass Transmission errors through verbatim (FR-05)
-- All tools: return clear success message
-- All tools: name resolution follows same case-insensitive exact-match rules as `get_torrent` (no-match and duplicate errors reuse same patterns)
-- Unit tests: mock `transmission-rpc`, cover success, no-match, duplicate, Transmission error
-- Integration tests: against Docker Transmission
-
-**Gate**: All unit and integration tests pass.
-
----
-
-### Phase 8 — `add_torrent`
-
-**Goal**: Implement torrent addition with input validation and directory sandboxing.
+**Goal**: Implement torrent addition with input validation and directory sandboxing. Implementing this before `get_torrent` allows integration tests to populate Transmission with known torrents, enabling richer testing of all subsequent lookup and management tools.
 
 **Integration test torrent**: Damn Small Linux 2024 RC6 — `https://linuxtracker.org/download.php?id=9a9f19345e31afd1dc9a5caaedf7982459900498&f=Damn+Small+Linux+2024+RC6+ISO.torrent&key=6c2d037a`
 
@@ -195,7 +159,59 @@ Approved requirements: `aidlc-docs/inception/requirements/requirements.md`
 - Unit tests: mock `transmission-rpc`, cover magnet valid, URL valid, invalid input, download_dir in-bounds, download_dir out-of-bounds, duplicate (silent success)
 - Integration tests: requires deferred torrent URL; tests actual add against Docker Transmission
 
-**Gate**: All unit and integration tests pass (integration test awaits deferred URL).
+**Gate**: All unit and integration tests pass.
+
+---
+
+### Phase 7 — `list_torrents` Integration Smoke Test
+
+**Goal**: Now that `add_torrent` is implemented, add an integration test that adds a real torrent and confirms it appears in `list_torrents` results. This exercise is intentionally narrow — the torrent's download progress, seeders, peers, and speeds are non-deterministic — so the test only asserts presence, not field values.
+
+**Deliverables**:
+- New integration test in `tests/integration/` that:
+  1. Adds the DSL torrent via `add_torrent` (HTTP/HTTPS URL)
+  2. Calls `list_torrents`
+  3. Asserts the returned list contains at least one entry whose `name` matches the added torrent (case-insensitive)
+- No changes to production code — test-only phase
+- Existing unit tests for `list_torrents` are unchanged
+
+**Gate**: New integration test passes; all existing unit and integration tests continue to pass.
+
+---
+
+### Phase 8 — `get_torrent`
+
+**Goal**: Implement single-torrent lookup with name matching semantics. With `add_torrent` already available, integration tests can add a known torrent and immediately verify lookup behaviour.
+
+**Deliverables**:
+- `get_torrent` MCP tool:
+  - Lookup: case-insensitive exact name match
+  - Returns all `list_torrents` fields plus: `save_path`, `ratio` ("1.24"), `files` (name, human-readable size, progress %), `error_message` (string or null)
+  - No match: error `"No torrent found matching '[name]'"`
+  - Duplicate match: error listing each match with `added_on` and `size`
+- Unit tests: mock `transmission-rpc`, cover normal match, no match, duplicate match, case-insensitivity
+- Integration tests: verify lookup against Docker Transmission
+
+**Gate**: All unit and integration tests pass.
+
+---
+
+### Phase 9 — Torrent Management Tools (`start`, `stop`, `remove`)
+
+**Goal**: Implement the four management operations that act on existing torrents.
+
+**Deliverables**:
+- `start_torrent` MCP tool (starts/resumes by name; case-insensitive)
+- `stop_torrent` MCP tool (stops/pauses by name; case-insensitive)
+- `remove_torrent` MCP tool (removes torrent, keeps downloaded data; by name)
+- `remove_torrent_and_delete_data` MCP tool (removes torrent + deletes data; by name)
+- All tools: pass Transmission errors through verbatim (FR-05)
+- All tools: return clear success message
+- All tools: name resolution follows same case-insensitive exact-match rules as `get_torrent` (no-match and duplicate errors reuse same patterns)
+- Unit tests: mock `transmission-rpc`, cover success, no-match, duplicate, Transmission error
+- Integration tests: against Docker Transmission
+
+**Gate**: All unit and integration tests pass.
 
 ---
 
@@ -213,13 +229,15 @@ flowchart TD
 
     P5["Phase 5\nMCP Server Bootstrap + list_torrents\n─────────────────────────\nFastMCP HTTP/SSE server\nlist_torrents tool\nunit + integration tests"]
 
-    P6["Phase 6\nget_torrent\n─────────────────────────\ncase-insensitive name match\nno-match · duplicate errors\nunit + integration tests"]
+    P6["Phase 6\nadd_torrent\n─────────────────────────\ninput validation\ndownload_dir sandboxing\nunit + integration tests"]
 
-    P7["Phase 7\nManagement Tools\n─────────────────────────\nstart · stop · remove\nremove_and_delete_data\nunit + integration tests"]
+    P7["Phase 7\nlist_torrents smoke test\n─────────────────────────\nadd real torrent via add_torrent\nassert it appears in list_torrents\nintegration test only"]
 
-    P8["Phase 8\nadd_torrent\n─────────────────────────\ninput validation\ndownload_dir sandboxing\nunit + integration tests"]
+    P8["Phase 8\nget_torrent\n─────────────────────────\ncase-insensitive name match\nno-match · duplicate errors\nunit + integration tests"]
 
-    URL[/"✓ Resolved Dependency\nDamn Small Linux 2024 RC6\n.torrent URL for Phase 8"/]
+    P9["Phase 9\nManagement Tools\n─────────────────────────\nstart · stop · remove\nremove_and_delete_data\nunit + integration tests"]
+
+    URL[/"✓ Resolved Dependency\nDamn Small Linux 2024 RC6\n.torrent URL for Phase 6"/]
 
     P1 -->|gate: project installs| P2
     P1 -->|gate: project installs| P3
@@ -229,8 +247,9 @@ flowchart TD
     P4 -->|gate: smoke test passes| P5
     P5 -->|gate: all tests pass| P6
     P6 -->|gate: all tests pass| P7
-    P7 -->|gate: all tests pass| P8
-    URL -.->|required for integration test| P8
+    P7 -->|gate: smoke test passes| P8
+    P8 -->|gate: all tests pass| P9
+    URL -.->|required for integration test| P6
 
     style P2 fill:#d4edda,stroke:#28a745,color:#155724
     style P3 fill:#d4edda,stroke:#28a745,color:#155724
@@ -238,7 +257,7 @@ flowchart TD
     style URL fill:#d4edda,stroke:#28a745,color:#155724
 ```
 
-Phases 2, 3, and 4 are all NFR phases that run in parallel after Phase 1 — all three must complete before Phase 5 begins. Phases 5 through 8 are strictly sequential functional work.
+Phases 2, 3, and 4 are all NFR phases that run in parallel after Phase 1 — all three must complete before Phase 5 begins. Phases 5 through 9 are strictly sequential functional work.
 
 ---
 
@@ -246,9 +265,9 @@ Phases 2, 3, and 4 are all NFR phases that run in parallel after Phase 1 — all
 
 | Phase | Item | Status |
 |---|---|---|
-| 8 | Small public torrent URL for integration test | **Resolved** — see below |
+| 6 | Small public torrent URL for integration test | **Resolved** — see below |
 
-### Phase 8 Integration Test Torrent
+### Phase 6 Integration Test Torrent
 
 - **Name**: Damn Small Linux 2024 RC6
 - **URL**: `https://linuxtracker.org/download.php?id=9a9f19345e31afd1dc9a5caaedf7982459900498&f=Damn+Small+Linux+2024+RC6+ISO.torrent&key=6c2d037a`
