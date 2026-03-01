@@ -21,13 +21,26 @@ An MCP server that exposes [Transmission](https://transmissionbt.com/) BitTorren
 
 ### Option A — Docker Compose
 
-1. Copy the example config and edit it:
+1. Create a `docker-compose.yml`:
+
+   ```yaml
+   services:
+     transmission-mcp:
+       image: sesopenko/transmission_client_mcp:latest
+       ports:
+         - "8080:8080"
+       volumes:
+         - ./config.toml:/config/config.toml:ro
+       restart: unless-stopped
+   ```
+
+2. Copy the example config and edit it:
 
    ```bash
    cp config.toml.example config.toml
    ```
 
-2. Start the server:
+3. Start the server:
 
    ```bash
    docker compose up -d
