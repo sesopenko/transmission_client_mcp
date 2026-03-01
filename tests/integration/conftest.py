@@ -41,9 +41,11 @@ def transmission_client() -> Iterator[Client]:
     ends.
     """
     _compose_up()
-    client = _wait_for_transmission()
-    yield client
-    _compose_down()
+    try:
+        client = _wait_for_transmission()
+        yield client
+    finally:
+        _compose_down()
 
 
 def _compose_up() -> None:
