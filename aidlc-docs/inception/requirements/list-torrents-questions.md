@@ -15,16 +15,16 @@ X) Other (please describe after [Answer]: tag below)
 
 [Answer]:X
 
-* added on
+* added on (ISO 8601 string; null if unavailable)
 * name
-* size
-* percentage done
+* size (human-readable, variable units e.g. "4.2 GB")
+* percentage done (e.g. "73.5%")
 * status
-* seeds (connected/total)
-* peers (connected/total)
-* download speed (MB/s)
-* Upload speed (MB/s)
-* ETA (HH:MM:SS)
+* seeds — connected seeders / total known seeders (e.g. "4/12"). Connected seeders are peers with 100% download progress; total is the max seeder count from tracker stats. Matches the Seeds column in the Transmission desktop client.
+* peers — connected leechers / total known leechers (e.g. "2/8"). Connected leechers are peers with less than 100% download progress; total is the max leecher count from tracker stats. Matches the Peers column in the Transmission desktop client.
+* download speed (human-readable, variable units e.g. "3.2 MB/s", "512 KB/s")
+* upload speed (human-readable, variable units e.g. "1.1 MB/s", "256 KB/s")
+* ETA (HH:MM:SS, or "N/A" when not applicable)
 
 ---
 

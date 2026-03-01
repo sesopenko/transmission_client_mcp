@@ -95,20 +95,20 @@ Rationale: True duplicates (same name, differing only in case) are rare but poss
 **Duplicate handling:**
 - If the same torrent is added twice, silently succeed — Transmission rejects duplicates internally and the error will be passed through per FR-05 if needed
 
-### FR-02b: list_torrents Detail
+### FR-02c: list_torrents Detail
 Each entry returned by `list_torrents` SHALL include the following fields:
 
 | Field | Format | Notes |
 |---|---|---|
-| `added_on` | ISO 8601 datetime | Date the torrent was added |
+| `added_on` | ISO 8601 datetime string, or null | Date the torrent was added; null if unavailable |
 | `name` | string | Torrent name |
 | `size` | string | Total size (human-readable, e.g. "4.2 GB") |
 | `progress` | string | Percentage complete (e.g. "73.5%") |
 | `status` | string | e.g. "downloading", "seeding", "stopped", "checking" |
-| `seeds` | string | Connected/total (e.g. "4/12") |
-| `peers` | string | Connected/total (e.g. "2/8") |
-| `download_speed` | string | In MB/s (e.g. "3.2 MB/s"); "0 MB/s" when not active |
-| `upload_speed` | string | In MB/s (e.g. "1.1 MB/s"); "0 MB/s" when not active |
+| `seeds` | string | Connected seeders / total known seeders (e.g. "4/12"). Connected seeders are peers with 100% download progress; total is the highest seeder count reported across all trackers. Matches the Seeds column in the Transmission desktop client. |
+| `peers` | string | Connected leechers / total known leechers (e.g. "2/8"). Connected leechers are peers with less than 100% download progress; total is the highest leecher count reported across all trackers. Matches the Peers column in the Transmission desktop client. |
+| `download_speed` | string | Human-readable (e.g. "3.2 MB/s", "512 KB/s"); "0 B/s" when not active |
+| `upload_speed` | string | Human-readable (e.g. "1.1 MB/s", "256 KB/s"); "0 B/s" when not active |
 | `eta` | string | Formatted as HH:MM:SS; "N/A" when not applicable |
 
 **Behaviour:**
@@ -119,6 +119,7 @@ Each entry returned by `list_torrents` SHALL include the following fields:
 
 ### FR-03: HTTP/SSE Transport
 - The server SHALL expose an HTTP/SSE endpoint (not stdio)
+- The MCP endpoint SHALL be at the path `/mcp` (e.g. `http://host:port/mcp`)
 - The server SHALL support HTTP only — TLS/HTTPS is explicitly out of scope
 - HTTPS termination is the responsibility of a reverse proxy (e.g. Traefik, Apache, nginx) in front of this server
 - The server SHALL be accessible on the LAN by LibreChat

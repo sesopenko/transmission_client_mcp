@@ -127,7 +127,8 @@ Approved requirements: `aidlc-docs/inception/requirements/requirements.md`
 - FastMCP server wired to HTTP/SSE transport, host/port from config
 - `list_torrents` MCP tool:
   - Returns all torrents sorted by date added (oldest first)
-  - Fields: `added_on` (ISO 8601), `name`, `size` (human-readable), `progress` ("73.5%"), `status`, `seeds` ("4/12"), `peers` ("2/8"), `download_speed` ("3.2 MB/s"), `upload_speed` ("1.1 MB/s"), `eta` ("HH:MM:SS" or "N/A")
+  - Fields: `added_on` (ISO 8601 string or null), `name`, `size` (human-readable), `progress` ("73.5%"), `status`, `seeds` (connected seeders/total known seeders e.g. "4/12"), `peers` (connected leechers/total known leechers e.g. "2/8"), `download_speed` (human-readable e.g. "3.2 MB/s"), `upload_speed` (human-readable e.g. "1.1 MB/s"), `eta` ("HH:MM:SS" or "N/A")
+  - Seeds: peers with 100% progress / max tracker seeder count; Peers: peers below 100% / max tracker leecher count — matching Transmission's desktop client columns
   - Empty list case: returns `[]` with message "No torrents found"
 - Logging: every tool invocation logged at `info`; return values at `debug`; Transmission errors at `error`
 - Unit tests: mock `transmission-rpc`, cover normal case, empty list, Transmission error pass-through
