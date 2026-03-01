@@ -30,9 +30,11 @@ class TestGetTorrentIntegration:
     def test_get_torrent_returns_expected_fields(self, transmission_client: Client) -> None:
         """Add a real torrent and verify get_torrent returns all required fields."""
         try:
-            tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
+            add_result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
+            # Use the name Transmission actually assigned to avoid hardcoded-name brittleness.
+            torrent_name = add_result.get("name") or _DSL_TORRENT_NAME
 
-            result = tools.get_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_NAME)
+            result = tools.get_torrent(transmission_client, _SILENT_LOGGER, torrent_name)
 
             assert "error" not in result, f"Expected success, got error: {result.get('error')}"
 
@@ -71,9 +73,10 @@ class TestGetTorrentIntegration:
     def test_get_torrent_case_insensitive_match(self, transmission_client: Client) -> None:
         """Verify lookup succeeds when name case differs from stored name."""
         try:
-            tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
+            add_result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
+            torrent_name = add_result.get("name") or _DSL_TORRENT_NAME
 
-            upper_name = _DSL_TORRENT_NAME.upper()
+            upper_name = torrent_name.upper()
             result = tools.get_torrent(transmission_client, _SILENT_LOGGER, upper_name)
 
             assert "error" not in result, (

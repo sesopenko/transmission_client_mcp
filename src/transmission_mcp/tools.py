@@ -169,7 +169,7 @@ def get_torrent(client: Client, logger: Logger, name: str) -> dict:
     result = _format_torrent(torrent)
     result["save_path"] = torrent.download_dir or ""
     ratio_val = torrent.upload_ratio
-    result["ratio"] = f"{ratio_val:.2f}" if ratio_val >= 0 else "0.00"
+    result["ratio"] = f"{ratio_val:.2f}" if ratio_val is not None and ratio_val >= 0 else "0.00"
     result["files"] = _format_files(torrent)
     result["error_message"] = torrent.error_string if torrent.error else None
 

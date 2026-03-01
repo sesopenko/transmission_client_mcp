@@ -82,6 +82,12 @@ class TestGetTorrentNormalCase:
         result = tools.get_torrent(client, _make_logger(), "Test Torrent")
         assert result["ratio"] == "1.24"
 
+    def test_ratio_zero_when_none(self):
+        client = MagicMock()
+        client.get_torrents.return_value = [_make_torrent(upload_ratio=None)]
+        result = tools.get_torrent(client, _make_logger(), "Test Torrent")
+        assert result["ratio"] == "0.00"
+
     def test_ratio_zero_when_negative(self):
         client = MagicMock()
         client.get_torrents.return_value = [_make_torrent(upload_ratio=-1.0)]
