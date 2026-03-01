@@ -80,16 +80,16 @@ level = "info"
 
 ## Connecting an AI Application
 
-Point your MCP-compatible AI application at the server's SSE endpoint:
+Point your MCP-compatible AI application at the server's MCP endpoint:
 
 ```
-http://<host>:<port>/sse
+http://<host>:<port>/mcp
 ```
 
 For example, if the server is running on `192.168.1.10` with the default port:
 
 ```
-http://192.168.1.10:8080/sse
+http://192.168.1.10:8080/mcp
 ```
 
 Consult your AI application's documentation for how to register an MCP server.

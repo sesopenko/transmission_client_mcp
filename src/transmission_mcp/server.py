@@ -36,8 +36,10 @@ def list_torrents() -> dict:
         ``download_speed``, ``upload_speed``, and ``eta`` (HH:MM:SS or N/A).
         When there are no torrents, also includes ``message: "No torrents found"``.
     """
-    assert _client is not None, "Transmission client not initialized"
-    assert _logger is not None, "Logger not initialized"
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
     return tools.list_torrents(_client, _logger)
 
 

@@ -1,6 +1,7 @@
 """MCP tool implementations for the Transmission MCP server."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from transmission_rpc import Client, Torrent
 
@@ -27,7 +28,7 @@ def list_torrents(client: Client, logger: Logger) -> dict:
         Exception: If the Transmission RPC call fails (logged at ``error`` before
             re-raising so the error propagates to the MCP client verbatim).
     """
-    logger.info("list_torrents invoked")
+    logger.info("list_torrents invoked", tool="list_torrents")
     try:
         torrents = client.get_torrents()
     except Exception as exc:
@@ -45,19 +46,30 @@ def list_torrents(client: Client, logger: Logger) -> dict:
 
 
 def _format_torrent(torrent: Torrent) -> dict:
-    added_on = torrent.added_date.isoformat() if torrent.added_date else ""
+    added_on: str | None = torrent.added_date.isoformat() if torrent.added_date else None
+    # torrent.peers is the raw RPC peer array (list of dicts); the library's
+    # `-> int` annotation is incorrect — the actual value is list[dict[str, Any]].
+    peer_list: list[dict[str, Any]] = cast(list[dict[str, Any]], torrent.peers)
     return {
         "added_on": added_on,
         "name": torrent.name or "",
         "size": _human_readable_size(torrent.total_size or 0),
         "progress": f"{(torrent.percent_done or 0.0) * 100:.1f}%",
         "status": torrent.status or "",
-        "seeds": f"{torrent.peers_sending_to_us or 0}/{_tracker_seeder_count(torrent)}",
-        "peers": f"{torrent.peers_getting_from_us or 0}/{_tracker_leecher_count(torrent)}",
+        "seeds": f"{_connected_seeders(peer_list)}/{_tracker_seeder_count(torrent)}",
+        "peers": f"{_connected_leechers(peer_list)}/{_tracker_leecher_count(torrent)}",
         "download_speed": _human_readable_speed(torrent.rate_download or 0),
         "upload_speed": _human_readable_speed(torrent.rate_upload or 0),
         "eta": _format_eta(torrent.eta),
     }
+
+
+def _connected_seeders(peer_list: list[dict[str, Any]]) -> int:
+    return sum(1 for p in peer_list if p.get("progress", 0.0) >= 1.0)
+
+
+def _connected_leechers(peer_list: list[dict[str, Any]]) -> int:
+    return sum(1 for p in peer_list if p.get("progress", 0.0) < 1.0)
 
 
 def _human_readable_size(size_bytes: int) -> str:
