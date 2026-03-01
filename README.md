@@ -100,6 +100,7 @@ Consult your AI application's documentation for how to register an MCP server.
 
 | Tool | Description |
 |---|---|
+| `list_torrents` | List all torrents managed by Transmission, sorted by date added (oldest first). |
 
 > Tools are documented here as they are implemented.
 
