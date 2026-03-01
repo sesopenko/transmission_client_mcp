@@ -12,6 +12,7 @@ It is automatically pushed to Docker Hub on every merge to `main`. Keep it accur
 - The Docker Compose example changes (image name, port mapping, config path) — update the example block
 - Configuration options change (new keys, changed defaults) — update the **Configuration** section; the config example must include a descriptive inline comment for every key
 - The MCP endpoint path or port changes — update the **Connecting an AI Application** section
+- A tool is added or its behaviour changes significantly — update the **Example System Prompt** section to keep the `<tool>` entries and `<guidelines>` accurate; use the existing prompt in the file as the reference for structure and tone
 
 ### Rules
 
@@ -21,3 +22,4 @@ It is automatically pushed to Docker Hub on every merge to `main`. Keep it accur
 - Do not add developer workflow steps, test instructions, or maintainer notes
 - Do not add a tool row until the tool is implemented and its tests pass
 - Do not remove rows for tools that have been implemented
+- Do not rewrite the Example System Prompt from scratch; make the minimum edits needed to keep it accurate
