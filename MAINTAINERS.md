@@ -28,12 +28,10 @@ uv run pre-commit install
 
 ## Code Quality
 
-Run all quality checks manually:
+Run all quality checks:
 
 ```bash
-uv run ruff format .
-uv run ruff check .
-uv run mypy src/
+bash scripts/quality-check.sh
 ```
 
 These checks also run automatically on every commit via pre-commit hooks.
