@@ -2,14 +2,42 @@
 
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlparse
 
 from transmission_rpc import Client, Torrent
 
 from transmission_mcp.logging import Logger
 
+if TYPE_CHECKING:
+    from transmission_mcp.queue import TorrentQueue
+
 _EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+def list_queued_additions(queue: "TorrentQueue", logger: Logger) -> dict:
+    """List all torrent additions currently waiting in the queue.
+
+    Returns:
+        A dict with a ``jobs`` key containing a list of queued jobs, each with
+        ``job_id``, ``torrent_input``, and ``download_dir``. When the queue is
+        empty, also includes a ``message`` key set to ``"No jobs queued"``.
+    """
+    logger.info("list_queued_additions invoked", tool="list_queued_additions")
+    jobs_list = queue.list_jobs()
+
+    if not jobs_list:
+        return {"jobs": [], "message": "No jobs queued"}
+
+    result_jobs = [
+        {
+            "job_id": job.id,
+            "torrent_input": job.torrent_input,
+            "download_dir": job.download_dir,
+        }
+        for job in jobs_list
+    ]
+    return {"jobs": result_jobs}
 
 
 def list_torrents(client: Client, logger: Logger) -> dict:
@@ -50,14 +78,19 @@ def list_torrents(client: Client, logger: Logger) -> dict:
 def add_torrent(
     client: Client,
     logger: Logger,
+    queue: "TorrentQueue",
     torrent_input: str,
     download_dir: str | None = None,
 ) -> dict:
-    """Add a torrent to Transmission by magnet link or HTTP/HTTPS URL.
+    """Queue a torrent for addition to Transmission by magnet link or HTTP/HTTPS URL.
+
+    Validates the input, then queues the torrent for asynchronous addition by the
+    background queue worker. Returns immediately with a job ID for status tracking.
 
     Args:
         client: Transmission RPC client connected to a running Transmission instance.
         logger: Structured logger for recording invocations and results.
+        queue: The torrent queue for managing additions.
         torrent_input: A magnet link (``magnet:?xt=urn:...``) or HTTP/HTTPS URL
             pointing to a ``.torrent`` file.
         download_dir: Optional directory override for saving torrent files. Must be
@@ -65,16 +98,12 @@ def add_torrent(
             the session default.
 
     Returns:
-        A dict with a ``message`` key confirming success. For HTTP/HTTPS URL inputs,
-        also includes ``name``, ``status``, and ``size`` (human-readable) once
-        Transmission has resolved the torrent metadata. Magnet link responses contain
-        only ``message`` because metadata requires peer discovery.
+        A dict with ``message`` confirming the torrent was queued and a ``job_id``
+        for tracking the addition status.
 
     Raises:
         ValueError: If ``torrent_input`` is not a valid magnet link or HTTP/HTTPS URL,
             or if ``download_dir`` is outside Transmission's default download directory.
-        Exception: If the Transmission RPC call fails with a non-duplicate error
-            (logged at ``error`` before re-raising so the caller receives it verbatim).
     """
     logger.info("add_torrent invoked", tool="add_torrent", input=torrent_input)
     _validate_torrent_input(torrent_input)
@@ -82,39 +111,8 @@ def add_torrent(
     if download_dir is not None:
         _validate_download_dir(client, download_dir)
 
-    paused = _resolve_paused(client)
-    is_magnet = torrent_input.startswith("magnet:")
-
-    kwargs: dict[str, Any] = {"torrent": torrent_input, "paused": paused}
-    if download_dir is not None:
-        kwargs["download_dir"] = download_dir
-
-    try:
-        torrent = client.add_torrent(**kwargs)
-    except Exception as exc:
-        if "duplicate" in str(exc).lower():
-            logger.debug("add_torrent duplicate torrent, treating as success")
-            return {"message": "Torrent added successfully"}
-        logger.error("Transmission error in add_torrent", error=str(exc))
-        raise
-
-    if is_magnet:
-        logger.debug("add_torrent result", type="magnet")
-        return {"message": "Torrent added successfully"}
-
-    # The torrent-add RPC response only contains id/name/hashString; fetch the
-    # full torrent to obtain status and total_size.
-    full_torrent = client.get_torrent(torrent.id)
-    name = full_torrent.name or ""
-    status = full_torrent.status or ""
-    size = _human_readable_size(full_torrent.total_size or 0)
-    logger.debug("add_torrent result", name=name, status=status)
-    return {
-        "message": "Torrent added successfully",
-        "name": name,
-        "status": status,
-        "size": size,
-    }
+    job = queue.enqueue(torrent_input, download_dir)
+    return {"message": "Torrent queued successfully", "job_id": job.id}
 
 
 def get_torrent(client: Client, logger: Logger, name: str) -> dict:

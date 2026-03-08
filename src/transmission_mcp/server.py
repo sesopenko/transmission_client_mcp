@@ -10,7 +10,10 @@ or via the installed script::
 """
 
 import argparse
+import atexit
+import signal
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import fastmcp
 from transmission_rpc import Client as TransmissionClient
@@ -18,11 +21,32 @@ from transmission_rpc import Client as TransmissionClient
 from transmission_mcp import tools
 from transmission_mcp.config import load_config
 from transmission_mcp.logging import Logger, make_logger
+from transmission_mcp.queue import TorrentQueue
+
+if TYPE_CHECKING:
+    pass
 
 mcp = fastmcp.FastMCP("transmission-mcp")
 
 _client: TransmissionClient | None = None
 _logger: Logger | None = None
+_queue: TorrentQueue | None = None
+
+
+@mcp.tool()
+def list_queued_additions() -> dict:
+    """List all torrent additions currently waiting in the queue.
+
+    Returns:
+        A dict with a ``jobs`` key containing a list of queued job entries. Each
+        entry includes ``job_id``, ``torrent_input``, and ``download_dir``.
+        When the queue is empty, also includes ``message: "No jobs queued"``.
+    """
+    if _queue is None:
+        raise RuntimeError("Queue not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.list_queued_additions(_queue, _logger)
 
 
 @mcp.tool()
@@ -45,7 +69,10 @@ def list_torrents() -> dict:
 
 @mcp.tool()
 def add_torrent(torrent_input: str, download_dir: str | None = None) -> dict:
-    """Add a torrent to Transmission by magnet link or HTTP/HTTPS URL.
+    """Queue a torrent for addition to Transmission by magnet link or HTTP/HTTPS URL.
+
+    Validates the input and queues the torrent for asynchronous addition by a
+    background worker. Returns immediately with a job ID for status tracking.
 
     Args:
         torrent_input: A magnet link (``magnet:?xt=urn:...``) or HTTP/HTTPS URL
@@ -55,15 +82,16 @@ def add_torrent(torrent_input: str, download_dir: str | None = None) -> dict:
             the session default.
 
     Returns:
-        A dict with a ``message`` key confirming success. For URL inputs, also
-        includes ``name``, ``status``, and ``size`` once Transmission resolves the
-        metadata. Magnet link responses contain only ``message``.
+        A dict with a ``message`` key confirming the torrent was queued and a
+        ``job_id`` for tracking the addition status.
     """
     if _client is None:
         raise RuntimeError("Transmission client not initialized")
     if _logger is None:
         raise RuntimeError("Logger not initialized")
-    return tools.add_torrent(_client, _logger, torrent_input, download_dir)
+    if _queue is None:
+        raise RuntimeError("Queue not initialized")
+    return tools.add_torrent(_client, _logger, _queue, torrent_input, download_dir)
 
 
 @mcp.tool()
@@ -205,7 +233,7 @@ def main() -> None:
 
     config = load_config(args.config)
 
-    global _client, _logger
+    global _client, _logger, _queue
     _client = TransmissionClient(
         host=config.transmission.host,
         port=config.transmission.port,
@@ -213,6 +241,16 @@ def main() -> None:
         password=config.transmission.password or None,
     )
     _logger = make_logger(config.logging.level)
+    _queue = TorrentQueue(_client, _logger)
+
+    def _shutdown_handler(signum: int, frame: object) -> None:
+        """Signal handler for clean shutdown."""
+        if _queue is not None:
+            _queue.stop()
+
+    signal.signal(signal.SIGTERM, _shutdown_handler)
+    signal.signal(signal.SIGINT, _shutdown_handler)
+    atexit.register(lambda: _queue.stop() if _queue is not None else None)
 
     mcp.run(
         transport="streamable-http",

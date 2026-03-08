@@ -92,7 +92,8 @@ Copy and adapt this system prompt to give your AI assistant clear guidance on us
   </role>
   <tools>
     <tool name="list_torrents">List all torrents, sorted by date added (oldest first).</tool>
-    <tool name="add_torrent">Add a torrent by magnet link or HTTP/HTTPS URL.</tool>
+    <tool name="add_torrent">Queue a torrent for addition by magnet link or HTTP/HTTPS URL (asynchronous).</tool>
+    <tool name="list_queued_additions">List all torrent additions currently waiting in the queue.</tool>
     <tool name="get_torrent">Get detailed information about a torrent by name.</tool>
     <tool name="list_files_for_torrent">List the files contained in a torrent by name.</tool>
     <tool name="start_torrent">Start or resume a paused torrent by name.</tool>
@@ -102,6 +103,7 @@ Copy and adapt this system prompt to give your AI assistant clear guidance on us
   </tools>
   <guidelines>
     <item>When the user asks about downloads, call list_torrents first for an overview, then get_torrent for details on a specific item.</item>
+    <item>To add torrents, use add_torrent to queue them, then use list_queued_additions to check queue status.</item>
     <item>To view the files in a torrent, call list_files_for_torrent after identifying the torrent with get_torrent.</item>
     <item>Before calling remove_torrent or remove_torrent_and_delete_data, confirm the torrent name with the user.</item>
     <item>Before calling remove_torrent_and_delete_data, explicitly warn the user that all downloaded data will be permanently deleted and require unambiguous confirmation before proceeding.</item>
@@ -117,7 +119,8 @@ Copy and adapt this system prompt to give your AI assistant clear guidance on us
 | Tool | Description |
 |---|---|
 | `list_torrents` | List all torrents managed by Transmission, sorted by date added (oldest first). |
-| `add_torrent` | Add a torrent by magnet link or HTTP/HTTPS URL, with an optional download directory override. |
+| `add_torrent` | Queue a torrent for addition by magnet link or HTTP/HTTPS URL (asynchronous, with throttling to prevent tracker rate limits). |
+| `list_queued_additions` | List all torrent additions currently waiting in the queue. |
 | `get_torrent` | Fetch detailed information for a single torrent by name, including save path, ratio, and error state. |
 | `list_files_for_torrent` | List the files contained in a torrent, identified by name. |
 | `start_torrent` | Start or resume a paused torrent by name. |
