@@ -5,9 +5,6 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Pre-compile bytecode for faster container startup
-ENV UV_COMPILE_BYTECODE=1
-
 # Install production dependencies first (separate layer for cache efficiency)
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
