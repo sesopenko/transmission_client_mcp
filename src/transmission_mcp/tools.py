@@ -128,8 +128,7 @@ def get_torrent(client: Client, logger: Logger, name: str) -> dict:
     Returns:
         On success: a dict containing all ``list_torrents`` fields for the matched
         torrent, plus ``save_path`` (string), ``ratio`` (formatted string),
-        ``files`` (list of dicts with ``name``, ``size``, and ``progress``), and
-        ``error_message`` (error string or null).
+        and ``error_message`` (error string or null).
 
         On no match: ``{"error": "No torrent found matching '[name]'"}``.
 
@@ -156,11 +155,43 @@ def get_torrent(client: Client, logger: Logger, name: str) -> dict:
     result["save_path"] = torrent.download_dir or ""
     ratio_val = torrent.upload_ratio
     result["ratio"] = f"{ratio_val:.2f}" if ratio_val is not None and ratio_val >= 0 else "0.00"
-    result["files"] = _format_files(torrent)
     result["error_message"] = torrent.error_string if torrent.error else None
 
     logger.debug("get_torrent result", name=torrent.name)
     return result
+
+
+def list_files_for_torrent(client: Client, logger: Logger, torrent_name: str) -> dict:
+    """List the files contained in a torrent, identified by name.
+
+    Args:
+        client: Transmission RPC client connected to a running Transmission instance.
+        logger: Structured logger for recording invocations and results.
+        torrent_name: Case-insensitive exact name of the torrent.
+
+    Returns:
+        A dict with a ``files`` key containing a list of file dicts
+        (``name``, ``size``, ``progress``), or an error dict on failure.
+
+    Raises:
+        Exception: If the Transmission RPC call fails (logged at ``error`` before
+            re-raising so the error propagates to the MCP client verbatim).
+    """
+    logger.info("list_files_for_torrent invoked", tool="list_files_for_torrent", torrent_name=torrent_name)
+    try:
+        torrents = client.get_torrents()
+    except Exception as exc:
+        logger.error("Transmission error in list_files_for_torrent", error=str(exc))
+        raise
+
+    result = _find_unique_torrent(torrents, torrent_name)
+    if isinstance(result, dict):
+        return result
+
+    torrent = result
+    files = _format_files(torrent)
+    logger.debug("list_files_for_torrent result", count=len(files))
+    return {"files": files}
 
 
 def start_torrent(client: Client, logger: Logger, name: str) -> dict:

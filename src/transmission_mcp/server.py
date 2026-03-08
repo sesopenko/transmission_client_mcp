@@ -76,8 +76,7 @@ def get_torrent(name: str) -> dict:
 
     Returns:
         On success: a dict with all ``list_torrents`` fields plus ``save_path``,
-        ``ratio``, ``files`` (list of file name/size/progress), and
-        ``error_message`` (error string or null).
+        ``ratio``, and ``error_message`` (error string or null).
 
         On no match: ``{"error": "No torrent found matching '[name]'"}``.
 
@@ -88,6 +87,29 @@ def get_torrent(name: str) -> dict:
     if _logger is None:
         raise RuntimeError("Logger not initialized")
     return tools.get_torrent(_client, _logger, name)
+
+
+@mcp.tool()
+def list_files_for_torrent(torrent_name: str) -> dict:
+    """List the files contained in a torrent by name.
+
+    Args:
+        torrent_name: The exact torrent name to look up (case-insensitive). Use
+            ``list_torrents`` to discover torrent names.
+
+    Returns:
+        On success: a dict with a ``files`` key containing a list of file dicts
+        (``name``, ``size``, ``progress``).
+
+        On no match: ``{"error": "No torrent found matching '[name]'"}``.
+
+        On duplicate match: ``{"error": "...", "matches": [{"added_on": ..., "size": ...}]}``.
+    """
+    if _client is None:
+        raise RuntimeError("Transmission client not initialized")
+    if _logger is None:
+        raise RuntimeError("Logger not initialized")
+    return tools.list_files_for_torrent(_client, _logger, torrent_name)
 
 
 @mcp.tool()

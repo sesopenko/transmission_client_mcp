@@ -67,7 +67,6 @@ class TestGetTorrentNormalCase:
         result = tools.get_torrent(client, _make_logger(), "Test Torrent")
         assert "save_path" in result
         assert "ratio" in result
-        assert "files" in result
         assert "error_message" in result
 
     def test_save_path_from_download_dir(self):
@@ -107,42 +106,6 @@ class TestGetTorrentNormalCase:
         ]
         result = tools.get_torrent(client, _make_logger(), "Test Torrent")
         assert result["error_message"] == "Blacklisted client, update or change client"
-
-    def test_files_list_empty_when_no_files(self):
-        client = MagicMock()
-        t = _make_torrent()
-        t.get_files.return_value = []
-        client.get_torrents.return_value = [t]
-        result = tools.get_torrent(client, _make_logger(), "Test Torrent")
-        assert result["files"] == []
-
-    def test_files_list_contains_expected_fields(self):
-        client = MagicMock()
-        t = _make_torrent()
-        t.get_files.return_value = [_make_file(name="disc1.iso", size=2_147_483_648, completed=1_073_741_824)]
-        client.get_torrents.return_value = [t]
-        result = tools.get_torrent(client, _make_logger(), "Test Torrent")
-        assert len(result["files"]) == 1
-        f = result["files"][0]
-        assert f["name"] == "disc1.iso"
-        assert f["size"] == "2.0 GB"
-        assert f["progress"] == "50.0%"
-
-    def test_files_progress_zero_when_size_is_zero(self):
-        client = MagicMock()
-        t = _make_torrent()
-        t.get_files.return_value = [_make_file(size=0, completed=0)]
-        client.get_torrents.return_value = [t]
-        result = tools.get_torrent(client, _make_logger(), "Test Torrent")
-        assert result["files"][0]["progress"] == "0.0%"
-
-    def test_files_progress_100_when_complete(self):
-        client = MagicMock()
-        t = _make_torrent()
-        t.get_files.return_value = [_make_file(size=1_000_000, completed=1_000_000)]
-        client.get_torrents.return_value = [t]
-        result = tools.get_torrent(client, _make_logger(), "Test Torrent")
-        assert result["files"][0]["progress"] == "100.0%"
 
     def test_no_error_key_in_result(self):
         client = MagicMock()
