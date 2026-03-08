@@ -11,11 +11,15 @@ Design notes (requirements.md):
 import os
 import subprocess
 import time
-from collections.abc import Iterator
+from collections.abc import Generator, Iterator
 from pathlib import Path
 
 import pytest
 from transmission_rpc import Client
+
+from transmission_mcp import tools
+from transmission_mcp.logging import make_logger
+from transmission_mcp.queue import TorrentQueue
 
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _COMPOSE_FILE = _PROJECT_ROOT / "docker-compose.test.yml"
@@ -65,6 +69,28 @@ _TIMEOUT_SECONDS = int(os.environ.get("TRANSMISSION_TEST_TIMEOUT_SECONDS", "120"
 # Polling cadence: shorter interval reduces overall suite latency on fast machines.
 _POLL_INTERVAL_SECONDS = 1.0
 
+_SILENT_LOGGER = make_logger("critical")
+
+
+def wait_for_torrent(client: Client, name: str, timeout: int = 30) -> None:
+    """Poll list_torrents until the named torrent appears or timeout expires.
+
+    Args:
+        client: The Transmission RPC client.
+        name: The torrent name to wait for.
+        timeout: Maximum seconds to wait before raising TimeoutError.
+
+    Raises:
+        TimeoutError: If the torrent does not appear within the timeout.
+    """
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        result = tools.list_torrents(client, _SILENT_LOGGER)
+        if any(t.get("name") == name for t in result.get("torrents", [])):
+            return
+        time.sleep(0.5)
+    raise TimeoutError(f"Torrent '{name}' did not appear within {timeout}s")
+
 
 @pytest.fixture(scope="session")
 def transmission_client() -> Iterator[Client]:
@@ -81,6 +107,18 @@ def transmission_client() -> Iterator[Client]:
         yield client
     finally:
         _compose_down()
+
+
+@pytest.fixture
+def torrent_queue(transmission_client: Client) -> Generator[TorrentQueue]:
+    """Create a TorrentQueue with no inter-job delay for fast testing.
+
+    Yields:
+        A TorrentQueue instance configured for integration testing.
+    """
+    queue = TorrentQueue(transmission_client, _SILENT_LOGGER, job_delay_seconds=0)
+    yield queue
+    queue.stop()
 
 
 def _compose_up() -> None:

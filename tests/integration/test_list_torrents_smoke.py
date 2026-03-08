@@ -2,8 +2,10 @@
 
 from transmission_rpc import Client
 
+from tests.integration.conftest import wait_for_torrent
 from transmission_mcp import tools
 from transmission_mcp.logging import make_logger
+from transmission_mcp.queue import TorrentQueue
 
 _SILENT_LOGGER = make_logger("critical")
 
@@ -24,14 +26,17 @@ def _remove_all_torrents(client: Client) -> None:
 
 
 class TestListTorrentsSmoke:
-    def test_added_torrent_appears_in_list_torrents(self, transmission_client: Client) -> None:
+    def test_added_torrent_appears_in_list_torrents(
+        self, transmission_client: Client, torrent_queue: TorrentQueue
+    ) -> None:
         """Add a real torrent via add_torrent and assert it appears in list_torrents.
 
         Asserts presence only — download progress, seeders, peers, and speeds
         are non-deterministic and are not checked.
         """
         try:
-            tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
+            tools.add_torrent(transmission_client, _SILENT_LOGGER, torrent_queue, _DSL_TORRENT_URL)
+            wait_for_torrent(transmission_client, _DSL_TORRENT_NAME)
 
             list_result = tools.list_torrents(transmission_client, _SILENT_LOGGER)
             torrents = list_result["torrents"]

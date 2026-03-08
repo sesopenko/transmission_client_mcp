@@ -2,8 +2,10 @@
 
 from transmission_rpc import Client
 
+from tests.integration.conftest import wait_for_torrent
 from transmission_mcp import tools
 from transmission_mcp.logging import make_logger
+from transmission_mcp.queue import TorrentQueue
 
 _SILENT_LOGGER = make_logger("critical")
 
@@ -13,10 +15,11 @@ _DSL_TORRENT_URL = (
 _DSL_TORRENT_NAME = "dsl-2024.rc6.iso"
 
 
-def _add_dsl_torrent(client: Client) -> str:
-    """Add the DSL test torrent and return the name Transmission assigned."""
-    result = tools.add_torrent(client, _SILENT_LOGGER, _DSL_TORRENT_URL)
-    return result.get("name") or _DSL_TORRENT_NAME
+def _add_dsl_torrent(client: Client, queue: TorrentQueue) -> str:
+    """Add the DSL test torrent and wait for it to appear, then return the torrent name."""
+    tools.add_torrent(client, _SILENT_LOGGER, queue, _DSL_TORRENT_URL)
+    wait_for_torrent(client, _DSL_TORRENT_NAME)
+    return _DSL_TORRENT_NAME
 
 
 def _remove_all_torrents(client: Client) -> None:
@@ -28,10 +31,10 @@ def _remove_all_torrents(client: Client) -> None:
 
 
 class TestStopTorrentIntegration:
-    def test_stop_torrent_succeeds(self, transmission_client: Client) -> None:
+    def test_stop_torrent_succeeds(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Add a torrent and verify stop_torrent returns a success message."""
         try:
-            name = _add_dsl_torrent(transmission_client)
+            name = _add_dsl_torrent(transmission_client, torrent_queue)
             result = tools.stop_torrent(transmission_client, _SILENT_LOGGER, name)
             assert "error" not in result
             assert "message" in result
@@ -47,10 +50,10 @@ class TestStopTorrentIntegration:
 
 
 class TestStartTorrentIntegration:
-    def test_start_torrent_succeeds(self, transmission_client: Client) -> None:
+    def test_start_torrent_succeeds(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Add a torrent, stop it, then start it; verify success message returned."""
         try:
-            name = _add_dsl_torrent(transmission_client)
+            name = _add_dsl_torrent(transmission_client, torrent_queue)
             tools.stop_torrent(transmission_client, _SILENT_LOGGER, name)
             result = tools.start_torrent(transmission_client, _SILENT_LOGGER, name)
             assert "error" not in result
@@ -67,10 +70,10 @@ class TestStartTorrentIntegration:
 
 
 class TestRemoveTorrentIntegration:
-    def test_remove_torrent_removes_from_list(self, transmission_client: Client) -> None:
+    def test_remove_torrent_removes_from_list(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Add a torrent, remove it, and confirm it no longer appears in list_torrents."""
         try:
-            name = _add_dsl_torrent(transmission_client)
+            name = _add_dsl_torrent(transmission_client, torrent_queue)
             result = tools.remove_torrent(transmission_client, _SILENT_LOGGER, name)
             assert "error" not in result
             assert "message" in result
@@ -90,10 +93,10 @@ class TestRemoveTorrentIntegration:
 
 
 class TestRemoveTorrentAndDeleteDataIntegration:
-    def test_removes_torrent_from_list(self, transmission_client: Client) -> None:
+    def test_removes_torrent_from_list(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Add a torrent, remove-with-delete, and confirm it no longer appears."""
         try:
-            name = _add_dsl_torrent(transmission_client)
+            name = _add_dsl_torrent(transmission_client, torrent_queue)
             result = tools.remove_torrent_and_delete_data(transmission_client, _SILENT_LOGGER, name)
             assert "error" not in result
             assert "message" in result

@@ -2,8 +2,10 @@
 
 from transmission_rpc import Client
 
+from tests.integration.conftest import wait_for_torrent
 from transmission_mcp import tools
 from transmission_mcp.logging import make_logger
+from transmission_mcp.queue import TorrentQueue
 
 _SILENT_LOGGER = make_logger("critical")
 
@@ -24,13 +26,13 @@ def _remove_all_torrents(client: Client) -> None:
 
 
 class TestListFilesForTorrentIntegration:
-    def test_returns_files_list(self, transmission_client: Client) -> None:
+    def test_returns_files_list(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Add a real torrent and verify list_files_for_torrent returns files."""
         try:
-            add_result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
-            torrent_name = add_result.get("name") or _DSL_TORRENT_NAME
+            tools.add_torrent(transmission_client, _SILENT_LOGGER, torrent_queue, _DSL_TORRENT_URL)
+            wait_for_torrent(transmission_client, _DSL_TORRENT_NAME)
 
-            result = tools.list_files_for_torrent(transmission_client, _SILENT_LOGGER, torrent_name)
+            result = tools.list_files_for_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_NAME)
 
             assert "error" not in result, f"Expected success, got error: {result.get('error')}"
             assert "files" in result
@@ -48,13 +50,13 @@ class TestListFilesForTorrentIntegration:
         finally:
             _remove_all_torrents(transmission_client)
 
-    def test_case_insensitive_match(self, transmission_client: Client) -> None:
+    def test_case_insensitive_match(self, transmission_client: Client, torrent_queue: TorrentQueue) -> None:
         """Verify lookup succeeds when name case differs from stored name."""
         try:
-            add_result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
-            torrent_name = add_result.get("name") or _DSL_TORRENT_NAME
+            tools.add_torrent(transmission_client, _SILENT_LOGGER, torrent_queue, _DSL_TORRENT_URL)
+            wait_for_torrent(transmission_client, _DSL_TORRENT_NAME)
 
-            upper_name = torrent_name.upper()
+            upper_name = _DSL_TORRENT_NAME.upper()
             result = tools.list_files_for_torrent(transmission_client, _SILENT_LOGGER, upper_name)
 
             assert "error" not in result, (

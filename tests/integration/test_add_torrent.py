@@ -2,8 +2,10 @@
 
 from transmission_rpc import Client
 
+from tests.integration.conftest import wait_for_torrent
 from transmission_mcp import tools
 from transmission_mcp.logging import make_logger
+from transmission_mcp.queue import TorrentQueue
 
 _SILENT_LOGGER = make_logger("critical")
 
@@ -24,13 +26,22 @@ def _remove_all_torrents(client: Client) -> None:
 
 
 class TestAddTorrentUrlIntegration:
-    def test_add_url_torrent_returns_expected_shape(self, transmission_client: Client):
+    def test_add_url_torrent_returns_expected_shape(
+        self, transmission_client: Client, torrent_queue: TorrentQueue
+    ) -> None:
         """Add a real .torrent URL and verify the response structure."""
         try:
-            result = tools.add_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_URL)
-            assert result["message"] == "Torrent added successfully"
-            assert result.get("name") == _DSL_TORRENT_NAME
-            assert "status" in result
-            assert "size" in result
+            result = tools.add_torrent(transmission_client, _SILENT_LOGGER, torrent_queue, _DSL_TORRENT_URL)
+            assert result["message"] == "Torrent queued successfully"
+            assert "job_id" in result
+
+            # Wait for the torrent to be added and then verify its fields
+            wait_for_torrent(transmission_client, _DSL_TORRENT_NAME)
+            torrent = tools.get_torrent(transmission_client, _SILENT_LOGGER, _DSL_TORRENT_NAME)
+
+            assert "error" not in torrent
+            assert torrent.get("name") == _DSL_TORRENT_NAME
+            assert "status" in torrent
+            assert "size" in torrent
         finally:
             _remove_all_torrents(transmission_client)
